@@ -86,19 +86,24 @@ if crm_filter != "Все":
 
 # --- KPI METRICS ---
 st.markdown("### 🎯 Ключевые метрики")
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
 
 total = len(filtered)
 relevant = len(filtered[filtered.get("Relevant", pd.Series()) == "Relevant"]) if "Relevant" in filtered.columns else 0
 unrelevant = len(filtered[filtered.get("Relevant", pd.Series()) == "Unrelevant"]) if "Relevant" in filtered.columns else 0
-meetings = len(filtered[filtered.get("Meeting Scheduled", pd.Series()).str.contains("Да", na=False)]) if "Meeting Scheduled" in filtered.columns else 0
+unknown_rel = len(filtered[filtered.get("Relevant", pd.Series()) == "Unknown"]) if "Relevant" in filtered.columns else 0
+meetings = len(filtered[filtered.get("Meeting Scheduled", pd.Series()) == "Да"]) if "Meeting Scheduled" in filtered.columns else 0
 valmax_replied = len(filtered[filtered.get("VALMAX ответил?", pd.Series()) == "Да"]) if "VALMAX ответил?" in filtered.columns else 0
+lead_replied = len(filtered[filtered.get("Лид ответил?", pd.Series()) == "Да"]) if "Лид ответил?" in filtered.columns else 0
+conversion = f"{round(meetings/total*100)}%" if total > 0 else "0%"
 
 c1.metric("Всего заявок", total)
 c2.metric("Relevant", relevant)
 c3.metric("Unrelevant", unrelevant)
-c4.metric("Meetings", meetings)
-c5.metric("VALMAX ответил", f"{valmax_replied}/{total}")
+c4.metric("Unknown", unknown_rel)
+c5.metric("Meetings", meetings)
+c6.metric("Лид ответил", lead_replied)
+c7.metric("Конверсия в Meeting", conversion)
 
 st.divider()
 
@@ -110,7 +115,7 @@ with col1:
     if "Месяц" in df.columns and "Relevant" in df.columns:
         month_data = df.groupby(["Месяц", "Relevant"]).size().reset_index(name="Кол-во")
         fig = px.bar(month_data, x="Месяц", y="Кол-во", color="Relevant",
-                     color_discrete_map={"Relevant": "#00d4aa", "Unrelevant": "#e94560"},
+                     color_discrete_map={"Relevant": "#00d4aa", "Unrelevant": "#e94560", "Unknown": "#a3b1c6"},
                      barmode="stack", template="plotly_dark")
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#a3b1c6"), height=350)
