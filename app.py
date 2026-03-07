@@ -55,7 +55,7 @@ st.markdown("*Данные в реальном времени из Google Sheets
 st.divider()
 
 # --- FILTERS ---
-col_f1, col_f2, col_f3 = st.columns(3)
+col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
 months = ["Все"] + sorted(df["Месяц"].unique().tolist(), reverse=True) if "Месяц" in df.columns else ["Все"]
 with col_f1:
@@ -65,9 +65,13 @@ managers = ["Все"] + sorted([m for m in df["Менеджер"].unique() if m]
 with col_f2:
     manager_filter = st.selectbox("👨‍💼 Менеджер", managers)
 
-relevance = ["Все", "Relevant", "Unrelevant"]
+relevance = ["Все", "Relevant", "Unrelevant", "Unknown"]
 with col_f3:
-    rel_filter = st.selectbox("✅ Статус", relevance)
+    rel_filter = st.selectbox("✅ Relevant", relevance)
+
+crm_statuses = ["Все"] + sorted([s for s in df["CRM статус"].unique() if s]) if "CRM статус" in df.columns else ["Все"]
+with col_f4:
+    crm_filter = st.selectbox("📊 CRM статус", crm_statuses)
 
 # Apply filters
 filtered = df.copy()
@@ -77,6 +81,8 @@ if manager_filter != "Все":
     filtered = filtered[filtered["Менеджер"] == manager_filter]
 if rel_filter != "Все":
     filtered = filtered[filtered["Relevant"] == rel_filter]
+if crm_filter != "Все":
+    filtered = filtered[filtered["CRM статус"] == crm_filter]
 
 # --- KPI METRICS ---
 st.markdown("### 🎯 Ключевые метрики")
@@ -130,7 +136,7 @@ with col3:
         time_data.columns = ["Время", "Кол-во"]
         # Sort by response time order
         order = ["<30 мин", "<1ч", "<2ч", "<4ч", "<24ч", ">24ч"]
-        time_data["sort"] = time_data["Время"].apply(lambda x: next((i for i, o in enumerate(order) if o in str(x)), 99))
+        time_data["sort"] = time_data["Время"].apply(lambda x: next((i for i, o in enumerate(order) if str(x).strip() == o), 99))
         time_data = time_data.sort_values("sort")
         fig = px.bar(time_data, x="Время", y="Кол-во", template="plotly_dark",
                      color="Кол-во", color_continuous_scale=["#e94560", "#00d4aa"])
@@ -157,7 +163,7 @@ funnel_data = {
     "Кол-во": [
         len(filtered),
         len(filtered[filtered.get("VALMAX ответил?", pd.Series()) == "Да"]) if "VALMAX ответил?" in filtered.columns else 0,
-        len(filtered[filtered.get("Лид ответил?", pd.Series()).str.contains("Да", na=False)]) if "Лид ответил?" in filtered.columns else 0,
+        len(filtered[filtered.get("Лид ответил?", pd.Series()) == "Да"]) if "Лид ответил?" in filtered.columns else 0,
         meetings,
         relevant,
     ]
@@ -200,6 +206,32 @@ with col6:
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Нет данных по отказам для текущего фильтра")
+
+# --- CRM STATUS ---
+st.divider()
+col7, col8 = st.columns(2)
+
+with col7:
+    st.markdown("### 📊 CRM статус")
+    if "CRM статус" in filtered.columns:
+        crm = filtered["CRM статус"].value_counts().reset_index()
+        crm.columns = ["Статус", "Кол-во"]
+        color_map = {"Open 💙": "#4361ee", "Lost ❌": "#e94560", "Won ✅": "#00d4aa", "No matches 🔄": "#a3b1c6"}
+        fig = px.pie(crm, names="Статус", values="Кол-во", template="plotly_dark",
+                     color="Статус", color_discrete_map=color_map)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=300)
+        st.plotly_chart(fig, use_container_width=True)
+
+with col8:
+    st.markdown("### 💰 Бюджеты")
+    if "Бюджет (CRM / ~Dribbble)" in filtered.columns:
+        budgets = filtered["Бюджет (CRM / ~Dribbble)"].value_counts().reset_index()
+        budgets.columns = ["Бюджет", "Кол-во"]
+        fig = px.bar(budgets, x="Бюджет", y="Кол-во", template="plotly_dark",
+                     color_discrete_sequence=["#4361ee"])
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                         font=dict(color="#a3b1c6"), height=300, showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
 
 # --- TABLE ---
 st.divider()
