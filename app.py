@@ -132,7 +132,7 @@ row2[3].metric("📊 Средний чек", f"${total_budget // won:,}" if won 
 
 st.divider()
 
-# --- CHARTS ROW 1 ---
+# --- ROW 1: Заявки + География ---
 col1, col2 = st.columns(2)
 
 with col1:
@@ -156,7 +156,37 @@ with col2:
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
-# --- CHARTS ROW 2 ---
+# --- ROW 2: CRM статус + Бюджеты ---
+st.divider()
+col_crm, col_budget = st.columns(2)
+
+with col_crm:
+    st.markdown("### 📊 CRM статус")
+    if "CRM статус" in filtered.columns:
+        crm = filtered["CRM статус"].value_counts().reset_index()
+        crm.columns = ["Статус", "Кол-во"]
+        color_map = {"Open 💙": "#4361ee", "Lost ❌": "#e94560", "Won ✅": "#00d4aa", "No matches 🔄": "#a3b1c6"}
+        fig = px.pie(crm, names="Статус", values="Кол-во", template="plotly_dark",
+                     color="Статус", color_discrete_map=color_map)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
+        st.plotly_chart(fig, use_container_width=True)
+
+with col_budget:
+    st.markdown("### 💰 Бюджеты")
+    if "Бюджет (CRM / ~Dribbble)" in filtered.columns:
+        budgets = filtered["Бюджет (CRM / ~Dribbble)"].value_counts().reset_index()
+        budgets.columns = ["Бюджет", "Кол-во"]
+        budget_order = ["Unknown", "$1000-$3000", "$3000-$5000", "$5000-$10000", "$10000-$15000", "$15000+"]
+        budgets["sort"] = budgets["Бюджет"].apply(lambda x: next((i for i, o in enumerate(budget_order) if str(x).strip() == o), 99))
+        budgets = budgets.sort_values("sort")
+        fig = px.bar(budgets, x="Бюджет", y="Кол-во", template="plotly_dark",
+                     color_discrete_sequence=["#4361ee"])
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                         font=dict(color="#a3b1c6"), height=350, showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+# --- ROW 3: Время ответа + Типы проектов ---
+st.divider()
 col3, col4 = st.columns(2)
 
 with col3:
@@ -164,7 +194,6 @@ with col3:
     if "Время ответа" in filtered.columns:
         time_data = filtered["Время ответа"].value_counts().reset_index()
         time_data.columns = ["Время", "Кол-во"]
-        # Sort by response time order
         order = ["<30 мин", "<1ч", "<2ч", "<4ч", "<24ч", ">24ч"]
         time_data["sort"] = time_data["Время"].apply(lambda x: next((i for i, o in enumerate(order) if str(x).strip() == o), 99))
         time_data = time_data.sort_values("sort")
@@ -189,20 +218,20 @@ st.divider()
 st.markdown("### 🔻 Конверсионная воронка")
 
 funnel_data = {
-    "Этап": ["Все заявки", "VALMAX ответил", "Лид ответил", "Meeting", "Relevant"],
+    "Этап": ["Все заявки", "VALMAX ответил", "Лид ответил", "Meeting", "Won"],
     "Кол-во": [
         len(filtered),
         len(filtered[filtered.get("VALMAX ответил?", pd.Series()) == "Да"]) if "VALMAX ответил?" in filtered.columns else 0,
         len(filtered[filtered.get("Лид ответил?", pd.Series()) == "Да"]) if "Лид ответил?" in filtered.columns else 0,
         meetings,
-        relevant,
+        won,
     ]
 }
 fig = go.Figure(go.Funnel(
     y=funnel_data["Этап"],
     x=funnel_data["Кол-во"],
     textinfo="value+percent initial",
-    marker=dict(color=["#4361ee", "#3a86ff", "#00d4aa", "#f77f00", "#e94560"]),
+    marker=dict(color=["#4361ee", "#3a86ff", "#f77f00", "#e94560", "#00d4aa"]),
 ))
 fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
                  plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
@@ -210,58 +239,15 @@ st.plotly_chart(fig, use_container_width=True)
 
 # --- MANAGERS ---
 st.divider()
-col5, col6 = st.columns(2)
-
-with col5:
-    st.markdown("### 👨‍💼 Менеджеры")
-    if "Менеджер" in filtered.columns:
-        mgr = filtered["Менеджер"].value_counts().reset_index()
-        mgr.columns = ["Менеджер", "Заявок"]
-        fig = px.bar(mgr, x="Менеджер", y="Заявок", template="plotly_dark",
-                     color="Менеджер", color_discrete_sequence=["#4361ee", "#e94560", "#00d4aa"])
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=300, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
-
-with col6:
-    st.markdown("### 📋 Причины отказа")
-    if "Причина отказа" in filtered.columns:
-        reasons = filtered[filtered["Причина отказа"] != ""]["Причина отказа"].value_counts().reset_index()
-        reasons.columns = ["Причина", "Кол-во"]
-        if len(reasons) > 0:
-            fig = px.bar(reasons, x="Кол-во", y="Причина", orientation="h", template="plotly_dark",
-                         color_discrete_sequence=["#e94560"])
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                             font=dict(color="#a3b1c6"), height=300)
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Нет данных по отказам для текущего фильтра")
-
-# --- CRM STATUS ---
-st.divider()
-col7, col8 = st.columns(2)
-
-with col7:
-    st.markdown("### 📊 CRM статус")
-    if "CRM статус" in filtered.columns:
-        crm = filtered["CRM статус"].value_counts().reset_index()
-        crm.columns = ["Статус", "Кол-во"]
-        color_map = {"Open 💙": "#4361ee", "Lost ❌": "#e94560", "Won ✅": "#00d4aa", "No matches 🔄": "#a3b1c6"}
-        fig = px.pie(crm, names="Статус", values="Кол-во", template="plotly_dark",
-                     color="Статус", color_discrete_map=color_map)
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=300)
-        st.plotly_chart(fig, use_container_width=True)
-
-with col8:
-    st.markdown("### 💰 Бюджеты")
-    if "Бюджет (CRM / ~Dribbble)" in filtered.columns:
-        budgets = filtered["Бюджет (CRM / ~Dribbble)"].value_counts().reset_index()
-        budgets.columns = ["Бюджет", "Кол-во"]
-        fig = px.bar(budgets, x="Бюджет", y="Кол-во", template="plotly_dark",
-                     color_discrete_sequence=["#4361ee"])
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=300, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+st.markdown("### 👨‍💼 Менеджеры")
+if "Менеджер" in filtered.columns:
+    mgr = filtered["Менеджер"].value_counts().reset_index()
+    mgr.columns = ["Менеджер", "Заявок"]
+    fig = px.bar(mgr, x="Менеджер", y="Заявок", template="plotly_dark",
+                 color="Менеджер", color_discrete_sequence=["#4361ee", "#e94560", "#00d4aa"])
+    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                     font=dict(color="#a3b1c6"), height=300, showlegend=False)
+    st.plotly_chart(fig, use_container_width=True)
 
 # --- TABLE ---
 st.divider()
