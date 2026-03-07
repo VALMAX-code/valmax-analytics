@@ -86,24 +86,49 @@ if crm_filter != "Все":
 
 # --- KPI METRICS ---
 st.markdown("### 🎯 Ключевые метрики")
-c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
+row1 = st.columns(7)
+row2 = st.columns(4)
 
 total = len(filtered)
 relevant = len(filtered[filtered.get("Relevant", pd.Series()) == "Relevant"]) if "Relevant" in filtered.columns else 0
 unrelevant = len(filtered[filtered.get("Relevant", pd.Series()) == "Unrelevant"]) if "Relevant" in filtered.columns else 0
 unknown_rel = len(filtered[filtered.get("Relevant", pd.Series()) == "Unknown"]) if "Relevant" in filtered.columns else 0
 meetings = len(filtered[filtered.get("Meeting Scheduled", pd.Series()) == "Да"]) if "Meeting Scheduled" in filtered.columns else 0
-valmax_replied = len(filtered[filtered.get("VALMAX ответил?", pd.Series()) == "Да"]) if "VALMAX ответил?" in filtered.columns else 0
 lead_replied = len(filtered[filtered.get("Лид ответил?", pd.Series()) == "Да"]) if "Лид ответил?" in filtered.columns else 0
-conversion = f"{round(meetings/total*100)}%" if total > 0 else "0%"
+meeting_conv = f"{round(meetings/total*100)}%" if total > 0 else "0%"
+won = len(filtered[filtered.get("CRM статус", pd.Series()) == "Won ✅"]) if "CRM статус" in filtered.columns else 0
+deal_conv = f"{round(won/total*100)}%" if total > 0 else "0%"
 
-c1.metric("Всего заявок", total)
-c2.metric("Relevant", relevant)
-c3.metric("Unrelevant", unrelevant)
-c4.metric("Unknown", unknown_rel)
-c5.metric("Meetings", meetings)
-c6.metric("Лид ответил", lead_replied)
-c7.metric("Конверсия в Meeting", conversion)
+# Calculate total budget from won deals (parse from Pipedrive data)
+def parse_budget(val):
+    """Try to extract numeric value from budget string"""
+    import re
+    if not val or val == "Unknown":
+        return 0
+    nums = re.findall(r'[\d,]+', str(val).replace(',', ''))
+    if nums:
+        try:
+            return max(int(n) for n in nums)
+        except:
+            return 0
+    return 0
+
+won_filtered = filtered[filtered.get("CRM статус", pd.Series()) == "Won ✅"] if "CRM статус" in filtered.columns else pd.DataFrame()
+total_budget = sum(won_filtered["Бюджет (CRM / ~Dribbble)"].apply(parse_budget)) if len(won_filtered) > 0 and "Бюджет (CRM / ~Dribbble)" in won_filtered.columns else 0
+budget_str = f"${total_budget:,}" if total_budget > 0 else "$0"
+
+row1[0].metric("Всего заявок", total)
+row1[1].metric("Relevant", relevant)
+row1[2].metric("Unrelevant", unrelevant)
+row1[3].metric("Unknown", unknown_rel)
+row1[4].metric("Meetings", meetings)
+row1[5].metric("Лид ответил", lead_replied)
+row1[6].metric("Конверсия в Meeting", meeting_conv)
+
+row2[0].metric("🏆 Выигранных сделок", won)
+row2[1].metric("📈 Конверсия в сделку", deal_conv)
+row2[2].metric("💰 Заработанный бюджет", budget_str)
+row2[3].metric("📊 Средний чек", f"${total_budget // won:,}" if won > 0 else "—")
 
 st.divider()
 
