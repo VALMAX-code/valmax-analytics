@@ -146,19 +146,26 @@ with col_d1:
     st.plotly_chart(fig, use_container_width=True)
 
 with col_d2:
-    # Positions per shot (treemap)
+    # Top shots by number of tags they appear in
     shot_counts = df.groupby('Shot Name').agg(
         tags=('Tag', 'count'),
         avg_pos=('Position', 'mean'),
         best_pos=('Position', 'min'),
-        views=('Views', 'first')
-    ).reset_index().sort_values('tags', ascending=False).head(15)
+    ).reset_index().sort_values('tags', ascending=False).head(10)
+    shot_counts['avg_pos'] = shot_counts['avg_pos'].round(1)
+    shot_counts['label'] = shot_counts['Shot Name'].str[:35]
+    shot_counts = shot_counts.sort_values('tags', ascending=True)
     
-    fig = px.treemap(shot_counts, path=['Shot Name'], values='tags',
-                     color='avg_pos', color_continuous_scale='RdYlGn_r',
-                     hover_data=['best_pos', 'views', 'tags'])
-    fig.update_layout(template="plotly_white", height=350, 
-                     coloraxis_colorbar_title="Avg Position")
+    fig = go.Figure(go.Bar(
+        x=shot_counts['tags'], y=shot_counts['label'], orientation='h',
+        marker_color='#667eea',
+        text=[f"{t} tags (avg #{a})" for t, a in zip(shot_counts['tags'], shot_counts['avg_pos'])],
+        textposition='outside'
+    ))
+    fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
+                     plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"),
+                     height=350, xaxis_title="Number of tags", title="Top Shots by Tag Appearances",
+                     margin=dict(r=120))
     st.plotly_chart(fig, use_container_width=True)
 
 # --- TOP #1 POSITIONS ---
