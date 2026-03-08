@@ -79,6 +79,29 @@ if valmax_row is not None:
     col4.metric("📉 Gap to Leader", f"-{gap:,}", help=f"Leader: {leader['Profile']}")
     col5.metric("🏆 Leader", leader['Profile'], f"{leader['Total Views']:,} views")
 
+# --- KEY INSIGHT ---
+if valmax_row is not None:
+    st.divider()
+    st.markdown("### 💡 Ключовий інсайт")
+    
+    # Avg views comparison
+    valmax_avg = valmax_row['Avg Views/Shot']
+    leader_avg = leader['Avg Views/Shot']
+    leader_shots = leader['Shots']
+    valmax_shots = valmax_row['Shots']
+    
+    ins_col1, ins_col2, ins_col3, ins_col4 = st.columns(4)
+    ins_col1.metric("📸 Наших шотів", valmax_shots)
+    ins_col2.metric("📸 Шотів лідера", leader_shots, help=leader['Profile'])
+    ins_col3.metric("⚡ Наш Avg Views/Shot", f"{valmax_avg:,}")
+    ins_col4.metric("⚡ Лідер Avg Views/Shot", f"{leader_avg:,}", help=leader['Profile'])
+    
+    if valmax_avg > leader_avg:
+        diff_pct = int((valmax_avg / leader_avg - 1) * 100)
+        st.success(f"🔥 **Якість VALMAX вища на {diff_pct}%!** Наш avg views/shot ({valmax_avg:,}) > лідер ({leader_avg:,}). Проблема не в якості, а в кількості шотів ({valmax_shots} vs {leader_shots}).")
+    else:
+        st.warning(f"⚠️ Лідер ({leader['Profile']}) має вищий avg views/shot ({leader_avg:,} vs наші {valmax_avg:,}). Потрібно підвищити якість контенту.")
+
 st.divider()
 
 # --- RACE CHART (cumulative views by date) ---
@@ -223,7 +246,14 @@ if valmax_row is not None:
     styled = gap_df.style.map(color_gap, subset=['Views Gap', 'Likes Gap', 'Shots Gap', 'Avg Views Gap'])
     st.dataframe(styled, use_container_width=True, hide_index=True)
     
-    st.caption("🔴 Червоний = конкурент попереду VALMAX · 🟢 Зелений = VALMAX попереду")
+    st.caption("""
+    **Як читати таблицю:**
+    - **Views Gap** — різниця в загальних переглядах за місяць (+ = конкурент попереду, - = ми попереду)
+    - **Likes Gap** — різниця в лайках за місяць
+    - **Shots Gap** — різниця в кількості опублікованих шотів (+ = конкурент постить більше)
+    - **Avg Views Gap** — різниця в середніх переглядах на 1 шот (- = наші шоти якісніші)
+    - 🔴 Червоний = конкурент попереду VALMAX · 🟢 Зелений = VALMAX попереду
+    """)
 
 st.divider()
 
