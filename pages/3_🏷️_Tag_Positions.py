@@ -192,6 +192,11 @@ with col_d2:
                      margin=dict(r=120))
     st.plotly_chart(fig, use_container_width=True)
 
+st.caption("""
+**📊 Position Distribution** — скільки позицій VALMAX тримає в кожному діапазоні (#1, #2-3, #4-5 тощо)  ·  
+**🎯 Top Shots by Tag Appearances** — які шоти з'являються в найбільшій кількості тегів. Більше тегів = ширше охоплення в пошуку Dribbble. `avg #N` — середня позиція цього шота по всіх тегах
+""")
+
 # --- TOP #1 POSITIONS ---
 st.divider()
 st.markdown("### 🥇 All #1 Positions")
