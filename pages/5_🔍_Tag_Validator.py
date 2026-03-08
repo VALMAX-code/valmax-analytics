@@ -590,24 +590,121 @@ if not kw_df.empty:
     avg_pos = kw_df['Google Pos'].mean() if 'Google Pos' in kw_df.columns else 0
     kw_col4.metric("📊 Avg Position", f"#{avg_pos:.1f}")
     
-    # Search
-    kw_search = st.text_input("🔍 Пошук по keyword", "", key="kw_search")
+    # VALMAX services for matching
+    VALMAX_SERVICES = ['dashboard', 'saas', 'fintech', 'healthcare', 'crm', 'analytics', 'web design',
+        'landing page', 'landing', 'ui', 'ux', 'b2b', 'startup', 'brand', 'branding', 'ecommerce',
+        'e-commerce', 'corporate', 'mobile app', 'mobile', 'product design', 'interface', 'admin',
+        'panel', 'website', 'portfolio', 'agency', 'marketing', 'real estate', 'crypto', 'blockchain',
+        'nft', 'defi', 'banking', 'finance', 'insurance', 'edtech', 'education', 'travel', 'booking',
+        'food', 'delivery', 'logistics', 'hr', 'recruitment', 'social', 'marketplace', 'platform',
+        'app design', 'web app', 'redesign', 'homepage', 'dark mode', 'clean design', 'minimal',
+        'illustration', 'typography', 'animation', 'motion', '3d', 'icon']
     
+    def parse_cpc_val(cpc_str):
+        """Parse CPC string like '$30.43' to float"""
+        if isinstance(cpc_str, (int, float)):
+            return float(cpc_str)
+        try:
+            return float(str(cpc_str).replace('$', '').replace(',', ''))
+        except:
+            return 0.0
+    
+    def calc_kw_score(kw, vol, cpc, pos, traf, tag_p, dr_shots):
+        """Score 0-100 for keyword relevance to VALMAX"""
+        s = 0
+        kw_lower = kw.lower()
+        
+        # Traffic (max 25)
+        if traf >= 5000: s += 25
+        elif traf >= 1000: s += 20
+        elif traf >= 500: s += 15
+        elif traf >= 100: s += 10
+        elif traf >= 10: s += 5
+        
+        # CPC / Commercial intent (max 20)
+        if cpc >= 15: s += 20
+        elif cpc >= 5: s += 15
+        elif cpc >= 1: s += 10
+        elif cpc >= 0.5: s += 5
+        
+        # Google position (max 15)
+        if pos <= 3: s += 15
+        elif pos <= 5: s += 12
+        elif pos <= 10: s += 8
+        elif pos <= 15: s += 4
+        
+        # Service match (max 25)
+        match_count = sum(1 for svc in VALMAX_SERVICES if svc in kw_lower or svc in tag_p.lower().replace('-', ' '))
+        if match_count >= 3: s += 25
+        elif match_count >= 2: s += 20
+        elif match_count >= 1: s += 15
+        
+        # Dribbble competition (max 15)
+        if dr_shots is not None:
+            if dr_shots < 24: s += 15
+            elif dr_shots < 50: s += 10
+            elif dr_shots < 80: s += 5
+        
+        return min(s, 100)
+    
+    def score_verdict(s):
+        if s >= 70: return "🔥 Must use"
+        if s >= 50: return "👍 Good"
+        if s >= 30: return "🤔 Maybe"
+        return "⚪ Weak"
+    
+    # Compute scores for all keywords
     display_kw = kw_df.copy()
+    scores = []
+    for _, row in display_kw.iterrows():
+        kw_val = str(row.get('Keyword', ''))
+        vol = int(row.get('Volume/mo', 0) or 0)
+        cpc = parse_cpc_val(row.get('CPC ($)', 0))
+        pos = int(row.get('Google Pos', 0) or 0)
+        traf = int(row.get('Est. Traffic/mo', 0) or 0)
+        tag_p = str(row.get('Tag Page', ''))
+        dr = tag_shots_lookup.get(tag_p.lower(), None)
+        scores.append(calc_kw_score(kw_val, vol, cpc, pos, traf, tag_p, dr))
+    display_kw['Score'] = scores
+    display_kw['Verdict'] = display_kw['Score'].apply(score_verdict)
+    
+    # Filters
+    f1, f2, f3 = st.columns(3)
+    kw_search = f1.text_input("🔍 Пошук по keyword", "", key="kw_search")
+    min_score = f2.select_slider("⭐ Мін. Score", options=[0, 30, 50, 70], value=0, key="min_score")
+    sort_by = f3.selectbox("📊 Сортувати по", ["Score ↓", "Traffic ↓", "Volume ↓", "CPC ↓", "Position ↑"], key="sort_kw")
+    
     if kw_search:
         display_kw = display_kw[display_kw['Keyword'].str.contains(kw_search, case=False, na=False)]
+    if min_score > 0:
+        display_kw = display_kw[display_kw['Score'] >= min_score]
     
-    # Build HTML table with copy buttons
+    sort_map = {
+        "Score ↓": ('Score', False),
+        "Traffic ↓": ('Est. Traffic/mo', False),
+        "Volume ↓": ('Volume/mo', False),
+        "CPC ↓": ('CPC ($)', False),
+        "Position ↑": ('Google Pos', True),
+    }
+    sort_col, sort_asc = sort_map.get(sort_by, ('Score', False))
+    if sort_col == 'CPC ($)':
+        display_kw['_cpc_num'] = display_kw['CPC ($)'].apply(parse_cpc_val)
+        display_kw = display_kw.sort_values('_cpc_num', ascending=False).drop(columns=['_cpc_num'])
+    else:
+        display_kw = display_kw.sort_values(sort_col, ascending=sort_asc)
+    
+    st.caption(f"Показано {min(500, len(display_kw)):,} з {len(display_kw):,} keywords (фільтр: Score ≥ {min_score})")
+    
+    # Build HTML table
     display_rows = display_kw.head(500)
     html_table = """
     <style>
-    .kw-table { width:100%; border-collapse:collapse; font-family:sans-serif; font-size:14px; }
-    .kw-table th { background:#667eea; color:white; padding:8px 12px; text-align:left; position:sticky; top:0; }
-    .kw-table td { padding:6px 12px; border-bottom:1px solid #eee; }
+    .kw-table { width:100%; border-collapse:collapse; font-family:sans-serif; font-size:13px; }
+    .kw-table th { background:#667eea; color:white; padding:7px 10px; text-align:left; position:sticky; top:0; cursor:pointer; }
+    .kw-table td { padding:5px 10px; border-bottom:1px solid #eee; }
     .kw-table tr:hover { background:#f0f2ff; }
-    .copy-btn { background:none; border:1px solid #ddd; border-radius:4px; cursor:pointer; padding:2px 6px; font-size:12px; }
-    .copy-btn:hover { background:#667eea; color:white; border-color:#667eea; }
-    .copy-btn:active { background:#43e97b; border-color:#43e97b; }
+    .copy-btn { background:none; border:1px solid #ddd; border-radius:4px; cursor:pointer; padding:2px 5px; font-size:11px; }
+    .copy-btn:hover { background:#667eea; color:white; }
     </style>
     <script>
     function copyTag(text, btn) {
@@ -618,7 +715,7 @@ if not kw_df.empty:
     </script>
     <div style="max-height:600px; overflow-y:auto;">
     <table class="kw-table">
-    <tr><th>📋</th><th>🏷️ Keyword</th><th>📈 Vol/mo</th><th>💰 CPC</th><th>🔍 Pos</th><th>🚀 Traffic</th><th>🎯 Dribbble</th><th>Tag</th></tr>
+    <tr><th>📋</th><th>🏷️ Keyword</th><th>📈 Vol</th><th>💰 CPC</th><th>🔍 Pos</th><th>🚀 Traffic</th><th>🎯 Dribbble</th><th>⭐</th><th>Verdict</th><th>Tag</th></tr>
     """
     for _, row in display_rows.iterrows():
         kw_val = str(row.get('Keyword', ''))
@@ -627,17 +724,21 @@ if not kw_df.empty:
         pos = int(row.get('Google Pos', 0) or 0)
         traf = int(row.get('Est. Traffic/mo', 0) or 0)
         tag_p = str(row.get('Tag Page', ''))
-        kw_escaped = kw_val.replace("'", "\\'")
-        # Dribbble competition from cached tag positions
+        sc = int(row.get('Score', 0))
+        verd = row.get('Verdict', '')
+        kw_escaped = kw_val.replace("'", "\\'").replace('"', '\\"')
         dr_shots = tag_shots_lookup.get(tag_p.lower(), None)
         if dr_shots is not None:
-            dr_color = '#43e97b' if dr_shots < 15 else ('#ffa726' if dr_shots < 24 else '#f5576c')
+            dr_color = '#43e97b' if dr_shots < 24 else ('#ffa726' if dr_shots < 50 else '#f5576c')
             dr_cell = f'<span style="color:{dr_color};font-weight:bold">{dr_shots}</span>'
         else:
             dr_cell = '<span style="color:#ccc">—</span>'
+        sc_color = '#43e97b' if sc >= 70 else ('#667eea' if sc >= 50 else ('#ffa726' if sc >= 30 else '#ccc'))
         html_table += f"""<tr>
             <td><button class="copy-btn" onclick="copyTag('{kw_escaped}', this)">📋</button></td>
-            <td>{kw_val}</td><td>{vol:,}</td><td>{cpc_val}</td><td>#{pos}</td><td>{traf:,}</td><td>{dr_cell}</td><td>{tag_p}</td>
+            <td>{kw_val}</td><td>{vol:,}</td><td>{cpc_val}</td><td>#{pos}</td><td>{traf:,}</td>
+            <td>{dr_cell}</td>
+            <td style="color:{sc_color};font-weight:bold">{sc}</td><td>{verd}</td><td>{tag_p}</td>
         </tr>"""
     html_table += "</table></div>"
     
