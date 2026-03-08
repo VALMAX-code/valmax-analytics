@@ -124,7 +124,7 @@ p5.metric("💾 Усього збережень", f"{df['Сохранения'].
 # --- FILTERS ---
 st.divider()
 st.markdown("#### 🔍 Фільтри")
-col_f1, col_f3 = st.columns([1, 2])
+col_f1, col_f3 = st.columns([1, 1])
 
 # Month filter with English month names, sorted newest first
 if "Месяц" in df.columns:
