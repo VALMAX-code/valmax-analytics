@@ -118,46 +118,62 @@ p5.metric("💾 Усього збережень", f"{df['Сохранения'].
 
 # --- FILTERS ---
 st.divider()
+st.markdown("#### 🔍 Фільтри")
 col_f1, col_f2, col_f3 = st.columns(3)
 
+# Month filter with English month names, sorted newest first
 if "Месяц" in df.columns:
-    # Sort months: newest first (by year desc, month desc)
-    month_order_map = {'Січень':1,'Лютий':2,'Березень':3,'Квітень':4,'Травень':5,'Червень':6,
-                       'Липень':7,'Серпень':8,'Вересень':9,'Жовтень':10,'Листопад':11,'Грудень':12,
-                       'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
-                       'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
-    def month_sort_val(m):
+    ru_to_en = {'Январь':'January','Февраль':'February','Март':'March','Апрель':'April',
+                'Май':'May','Июнь':'June','Июль':'July','Август':'August',
+                'Сентябрь':'September','Октябрь':'October','Ноябрь':'November','Декабрь':'December'}
+    month_num = {'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,
+                 'July':7,'August':8,'September':9,'October':10,'November':11,'December':12}
+    
+    # Build English month labels
+    en_months_set = set()
+    month_map = {}  # en_label -> original value
+    for m in df["Месяц"].unique():
         parts = str(m).split()
-        if len(parts) == 2 and parts[0] in month_order_map:
-            return int(parts[1]) * 100 + month_order_map[parts[0]]
-        return 0
-    sorted_months_list = sorted(df["Месяц"].unique().tolist(), key=month_sort_val, reverse=True)
-    months_available = ["Усі"] + sorted_months_list
+        if len(parts) == 2 and parts[0] in ru_to_en:
+            en_label = f"{ru_to_en[parts[0]]} {parts[1]}"
+            en_months_set.add(en_label)
+            month_map[en_label] = m
+    
+    sorted_en_months = sorted(en_months_set, 
+        key=lambda x: int(x.split()[1])*100 + month_num.get(x.split()[0], 0), reverse=True)
+    months_available = ["All"] + sorted_en_months
 else:
-    months_available = ["Усі"]
+    months_available = ["All"]
+    month_map = {}
+
 with col_f1:
-    month_filter = st.selectbox("📅 Місяць", months_available)
+    month_filter = st.selectbox("📅 Month", months_available)
 
-sort_options = {"Перегляди ↓": ("Просмотры", False), "Перегляди ↑": ("Просмотры", True), 
-                "Лайки ↓": ("Лайки", False), "Лайки ↑": ("Лайки", True),
-                "Збереження ↓": ("Сохранения", False), "Engagement ↓": ("Engagement", False),
-                "Дата ↓": ("Date", False), "Дата ↑": ("Date", True)}
+# Date range
 with col_f2:
-    sort_choice = st.selectbox("🔄 Сортування", list(sort_options.keys()))
+    if 'Date' in df.columns:
+        min_date = df['Date'].min().date()
+        max_date = df['Date'].max().date()
+        date_range = st.date_input("📆 Date range", value=(min_date, max_date), 
+                                    min_value=min_date, max_value=max_date)
+    else:
+        date_range = None
 
+# Views range
 with col_f3:
-    min_views = st.number_input("Мін. переглядів", min_value=0, value=0, step=1000)
+    max_views_val = int(df['Просмотры'].max()) if len(df) > 0 else 100000
+    views_range = st.slider("👁️ Views range", min_value=0, max_value=max_views_val, 
+                            value=(0, max_views_val), step=1000)
 
 # Apply filters
 filtered = df.copy()
-if month_filter != "Усі":
-    filtered = filtered[filtered["Месяц"] == month_filter]
-if min_views > 0:
-    filtered = filtered[filtered["Просмотры"] >= min_views]
-
-sort_col, sort_asc = sort_options[sort_choice]
-if sort_col in filtered.columns:
-    filtered = filtered.sort_values(sort_col, ascending=sort_asc)
+if month_filter != "All":
+    original_month = month_map.get(month_filter, month_filter)
+    filtered = filtered[filtered["Месяц"] == original_month]
+if date_range and len(date_range) == 2 and 'Date' in filtered.columns:
+    filtered = filtered[(filtered['Date'].dt.date >= date_range[0]) & (filtered['Date'].dt.date <= date_range[1])]
+filtered = filtered[(filtered['Просмотры'] >= views_range[0]) & (filtered['Просмотры'] <= views_range[1])]
+filtered = filtered.sort_values('Просмотры', ascending=False)
 
 # Filtered metrics
 st.divider()

@@ -6,7 +6,10 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 import json
 
-st.set_page_config(page_title="VALMAX Analytics", page_icon="📊", layout="wide")
+st.set_page_config(page_title="VALMAX Analytics", page_icon="📊", layout="wide",
+                   initial_sidebar_state="expanded")
+st.sidebar.markdown("### 📊 VALMAX Analytics")
+st.sidebar.caption("Навігація")
 
 
 
