@@ -430,11 +430,28 @@ if tag_input:
                 elif tag_score >= 25: verdict = "🤔 Maybe"
                 else: verdict = "⚪ Weak"
                 
+                # Check Dribbble competition (shots count) for this tag
+                dribbble_tag = kw_name.replace(' ', '-').lower()
+                dribbble_shots = 0
+                try:
+                    dr_resp = req_rel.get(f"https://dribbble.com/tags/{dribbble_tag}", timeout=5, 
+                        headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'})
+                    if dr_resp.status_code == 200:
+                        import re as re2
+                        dr_ids = set(re2.findall(r'/shots/(\d+)', dr_resp.text))
+                        dribbble_shots = len(dr_ids)
+                        # Adjust score: fewer shots = easier to rank
+                        if dribbble_shots < 10: tag_score += 15
+                        elif dribbble_shots < 20: tag_score += 5
+                except:
+                    pass
+                
                 rel_rows.append({
                     'Tag': kw_name,
                     'Volume/mo': vol_r,
                     'CPC ($)': f"${cpc_r:.2f}",
-                    'Competition': comp,
+                    'Ads Comp': comp,
+                    'Dribbble': dribbble_shots if dribbble_shots > 0 else '?',
                     'Score': tag_score,
                     'Verdict': verdict,
                 })
@@ -453,14 +470,18 @@ if tag_input:
                 </style>
                 <script>function cpTag(t,b){navigator.clipboard.writeText(t);b.textContent='✅';setTimeout(()=>b.textContent='📋',800);}</script>
                 <table class="rel-table">
-                <tr><th>📋</th><th>🏷️ Tag</th><th>📈 Vol</th><th>💰 CPC</th><th>⚔️ Comp</th><th>⭐ Score</th><th>Verdict</th></tr>
+                <tr><th>📋</th><th>🏷️ Tag</th><th>📈 Vol</th><th>💰 CPC</th><th>📢 Ads</th><th>🎯 Dribbble</th><th>⭐</th><th>Verdict</th></tr>
                 """
                 for _, row in rel_df.iterrows():
                     t = str(row['Tag']).replace("'", "\\'")
+                    dr_val = row.get('Dribbble', '?')
+                    dr_color = '#43e97b' if isinstance(dr_val, int) and dr_val < 15 else ('#ffa726' if isinstance(dr_val, int) and dr_val < 24 else '#f5576c' if isinstance(dr_val, int) else '#999')
                     html_rel += f"""<tr>
                         <td><button class="cp-btn" onclick="cpTag('{t}',this)">📋</button></td>
                         <td>{row['Tag']}</td><td>{row['Volume/mo']:,}</td><td>{row['CPC ($)']}</td>
-                        <td>{row['Competition']}</td><td>{row['Score']}</td><td>{row['Verdict']}</td>
+                        <td>{row.get('Ads Comp','')}</td>
+                        <td style="color:{dr_color};font-weight:bold">{dr_val} shots</td>
+                        <td>{row['Score']}</td><td>{row['Verdict']}</td>
                     </tr>"""
                 html_rel += "</table>"
                 st.components.v1.html(html_rel, height=min(400, 40 + len(rel_df)*32), scrolling=True)
