@@ -385,7 +385,7 @@ if tag_input:
                     "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", format="%d"),
                     "Google Pos": st.column_config.NumberColumn("🔍 Google #", format="%d"),
                     "Est. Traffic/mo": st.column_config.NumberColumn("🚀 Traffic", format="%d"),
-                    "CPC ($)": st.column_config.NumberColumn("💰 CPC", format="$%.2f"),
+                    "CPC ($)": st.column_config.TextColumn("💰 CPC"),
                     "Tag Page": st.column_config.TextColumn("Tag"),
                     "Landing URL": st.column_config.LinkColumn("🔗 Link", display_text="Open →"),
                 },
@@ -423,7 +423,7 @@ if not kw_df.empty:
         column_config={
             "Keyword": st.column_config.TextColumn("🏷️ Keyword", width="large"),
             "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", format="%d"),
-            "CPC ($)": st.column_config.NumberColumn("💰 CPC", format="$%.2f"),
+            "CPC ($)": st.column_config.TextColumn("💰 CPC"),
             "Google Pos": st.column_config.NumberColumn("🔍 Pos", format="%d"),
             "Est. Traffic/mo": st.column_config.NumberColumn("🚀 Traffic", format="%d"),
             "Tag Page": st.column_config.TextColumn("Tag Page"),
