@@ -96,6 +96,15 @@ seo_data = load_seo_data()
 serp_data = load_serp_data()
 tag_pos_df = load_tag_positions()
 
+# Build tag competition lookup from Tag Positions data (used in multiple sections)
+tag_shots_lookup = {}
+if not tag_pos_df.empty and 'Tag' in tag_pos_df.columns and 'Total on Page' in tag_pos_df.columns:
+    for _, tpr in tag_pos_df.iterrows():
+        tag_name = str(tpr.get('Tag', '')).lower().replace(' ', '-')
+        shots_count = int(tpr.get('Total on Page', 0) or 0)
+        if tag_name and shots_count > 0:
+            tag_shots_lookup[tag_name] = shots_count
+
 # --- HEADER ---
 st.markdown("# 🔍 Tag Validator")
 from utils import show_last_updated
@@ -431,28 +440,19 @@ if tag_input:
                 elif tag_score >= 25: verdict = "🤔 Maybe"
                 else: verdict = "⚪ Weak"
                 
-                # Check Dribbble competition (shots count) for this tag
+                # Dribbble competition from cached Tag Positions data
                 dribbble_tag = kw_name.replace(' ', '-').lower()
-                dribbble_shots = 0
-                try:
-                    dr_resp = req_rel.get(f"https://dribbble.com/tags/{dribbble_tag}", timeout=5, 
-                        headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'})
-                    if dr_resp.status_code == 200:
-                        import re as re2
-                        dr_ids = set(re2.findall(r'/shots/(\d+)', dr_resp.text))
-                        dribbble_shots = len(dr_ids)
-                        # Adjust score: fewer shots = easier to rank
-                        if dribbble_shots < 10: tag_score += 15
-                        elif dribbble_shots < 20: tag_score += 5
-                except:
-                    pass
+                dr_shots_cached = tag_shots_lookup.get(dribbble_tag, None)
+                if dr_shots_cached is not None:
+                    if dr_shots_cached < 24: tag_score += 15
+                    elif dr_shots_cached < 50: tag_score += 5
                 
                 rel_rows.append({
                     'Tag': kw_name,
                     'Volume/mo': vol_r,
                     'CPC ($)': f"${cpc_r:.2f}",
                     'Ads Comp': comp,
-                    'Dribbble': dribbble_shots if dribbble_shots > 0 else '?',
+                    'Dribbble': f"{dr_shots_cached} shots" if dr_shots_cached is not None else '—',
                     'Score': tag_score,
                     'Verdict': verdict,
                 })
@@ -486,6 +486,13 @@ if tag_input:
                     </tr>"""
                 html_rel += "</table>"
                 st.components.v1.html(html_rel, height=min(400, 40 + len(rel_df)*32), scrolling=True)
+                
+                st.caption("""
+                **📈 Vol** — пошукові запити в Google на місяць · **💰 CPC** — ціна кліку в Google Ads (вище = комерційніший) · 
+                **📢 Ads** — конкуренція в Google Ads (LOW/MEDIUM/HIGH) · **🎯 Dribbble** — кількість шотів з цим тегом на Dribbble (з кешу) · 
+                **⭐ Score** — загальна оцінка (Volume + CPC + Competition) · 
+                **Verdict**: 🔥 Must use (60+) · 👍 Good (40-59) · 🤔 Maybe (25-39) · ⚪ Weak (<25) · **—** = тег ще не сканувався
+                """)
                 
                 # Copyable tag list
                 all_tags = ", ".join(rel_df['Tag'].tolist())
@@ -582,15 +589,6 @@ if not kw_df.empty:
     display_kw = kw_df.copy()
     if kw_search:
         display_kw = display_kw[display_kw['Keyword'].str.contains(kw_search, case=False, na=False)]
-    
-    # Build tag competition lookup from Tag Positions data
-    tag_shots_lookup = {}
-    if not tag_pos_df.empty and 'Tag' in tag_pos_df.columns and 'Total on Page' in tag_pos_df.columns:
-        for _, tpr in tag_pos_df.iterrows():
-            tag_name = str(tpr.get('Tag', '')).lower().replace(' ', '-')
-            shots_count = int(tpr.get('Total on Page', 0) or 0)
-            if tag_name and shots_count > 0:
-                tag_shots_lookup[tag_name] = shots_count
     
     # Build HTML table with copy buttons
     display_rows = display_kw.head(500)
