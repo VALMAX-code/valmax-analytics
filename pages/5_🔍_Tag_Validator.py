@@ -109,17 +109,25 @@ tag_input = st.text_input("🏷️ Введіть тег для перевірк
 
 if tag_input:
     tag = tag_input.strip().lower()
+    # Normalize: "fintech dashboard" matches "fintech-dashboard" and vice versa
+    tag_hyphen = tag.replace(' ', '-')
+    tag_space = tag.replace('-', ' ')
     
     st.divider()
     st.markdown(f"### 📊 Аналіз тегу: `{tag}`")
     
-    # Find in keywords database
-    kw_match = kw_df[kw_df['Keyword'].str.lower() == tag] if not kw_df.empty else pd.DataFrame()
-    kw_partial = kw_df[kw_df['Keyword'].str.lower().str.contains(tag, na=False)] if not kw_df.empty else pd.DataFrame()
+    # Find in keywords database (match both space and hyphen variants)
+    if not kw_df.empty:
+        kw_lower = kw_df['Keyword'].str.lower()
+        kw_match = kw_df[(kw_lower == tag) | (kw_lower == tag_hyphen) | (kw_lower == tag_space)]
+        kw_partial = kw_df[kw_lower.str.contains(tag, na=False) | kw_lower.str.contains(tag_hyphen, na=False)]
+    else:
+        kw_match = pd.DataFrame()
+        kw_partial = pd.DataFrame()
     
-    # SEO data
-    seo = seo_data.get(tag, {})
-    serp = serp_data.get(tag, {})
+    # SEO data (try all variants)
+    seo = seo_data.get(tag, {}) or seo_data.get(tag_hyphen, {}) or seo_data.get(tag_space, {})
+    serp = serp_data.get(tag, {}) or serp_data.get(tag_hyphen, {}) or serp_data.get(tag_space, {})
     
     # Volume & CPC
     volume = 0
@@ -130,6 +138,10 @@ if tag_input:
     if not volume and seo:
         volume = int(seo.get('Volume/mo', 0) or 0)
         cpc = float(seo.get('CPC ($)', 0) or 0)
+    
+    # Fix CPC ×100 bug from Google Sheets
+    if cpc > 100:
+        cpc = cpc / 100
     
     # Dribbble Google position
     dribbble_gpos = None
@@ -151,7 +163,8 @@ if tag_input:
     valmax_pos = None
     tag_competition = 0
     if not tag_pos_df.empty:
-        tag_match = tag_pos_df[tag_pos_df['Tag'].str.lower() == tag]
+        tag_lower = tag_pos_df['Tag'].str.lower()
+        tag_match = tag_pos_df[(tag_lower == tag) | (tag_lower == tag_hyphen) | (tag_lower == tag_space)]
         if not tag_match.empty:
             valmax_pos = int(tag_match.iloc[0].get('Position', 0))
             tag_competition = int(tag_match.iloc[0].get('Total on Page', 0))
