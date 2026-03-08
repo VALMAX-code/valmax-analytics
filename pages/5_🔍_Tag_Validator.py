@@ -143,6 +143,29 @@ if tag_input:
     if cpc > 100:
         cpc = cpc / 100
     
+    # Live volume check if volume seems low or missing
+    if volume <= 50:
+        import requests as req_vol
+        try:
+            vol_payload = [{"keywords": [tag_space], "language_code": "en", "location_code": 2840}]
+            vol_resp = req_vol.post(
+                "https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live",
+                json=vol_payload,
+                headers={"Authorization": "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll"},
+                timeout=15
+            )
+            vol_result = vol_resp.json()
+            vol_items = vol_result.get('tasks', [{}])[0].get('result', [])
+            if vol_items:
+                new_vol = vol_items[0].get('search_volume', 0)
+                new_cpc = vol_items[0].get('cpc', 0)
+                if new_vol and new_vol > volume:
+                    volume = new_vol
+                if new_cpc and new_cpc > 0:
+                    cpc = new_cpc
+        except:
+            pass
+    
     # Dribbble Google position — try cached first, then live SERP
     dribbble_gpos = None
     est_traffic = 0
@@ -208,6 +231,19 @@ if tag_input:
             valmax_pos = int(tag_match.iloc[0].get('Position', 0))
             tag_competition = int(tag_match.iloc[0].get('Total on Page', 0))
     
+    # Live competition check if unknown — count shots on Dribbble tag page
+    if tag_competition == 0:
+        import requests as req2
+        try:
+            tag_url = f"https://dribbble.com/tags/{tag_hyphen}"
+            resp_tag = req2.get(tag_url, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+            if resp_tag.status_code == 200:
+                import re
+                shot_ids = list(dict.fromkeys(re.findall(r'/shots/(\d+)-', resp_tag.text)))
+                tag_competition = len(shot_ids)
+        except:
+            pass
+    
     # --- KPIs ---
     if live_serp:
         st.caption("🔴 **LIVE** — дані отримані з Google в реальному часі через DataForSEO ($0.002)")
@@ -216,8 +252,13 @@ if tag_input:
     k1.metric("🔍 Google Volume", f"{volume:,}/mo" if volume else "No data")
     k2.metric("🌐 Dribbble in Google", f"#{dribbble_gpos}" if dribbble_gpos else "Not in top 20")
     k3.metric("🚀 Est. Traffic to Dribbble", f"{est_traffic:,}/mo" if est_traffic else "0")
-    ai_label = "✅ Yes" if 'Yes' in str(ai_vis) else "❌ No"
-    k4.metric("🤖 AI Visibility", ai_label)
+    if 'mentioned' in str(ai_vis).lower():
+        ai_label = "✅ Dribbble in AI"
+    elif 'Yes' in str(ai_vis):
+        ai_label = "⚠️ AI active"
+    else:
+        ai_label = "❌ No AI Overview"
+    k4.metric("🤖 Google AI Overview", ai_label, help="Чи є AI Overview в Google для цього запиту. Це НЕ ChatGPT — це Google SGE.")
     k5.metric("📍 VALMAX Position", f"#{valmax_pos}" if valmax_pos else "Not ranked")
     
     k6, k7, k8 = st.columns(3)
