@@ -457,7 +457,7 @@ if 'Теги' in df.columns:
         st.caption(f"{len(tag_shots)} shots with tag **{selected_tag}**")
         
         # Build HTML table with clickable names
-        show_all = st.checkbox("View all", key="tag_view_all") if len(tag_shots) > 20 else True
+        show_all = st.checkbox(f"View all {len(tag_shots)} shots", key="tag_view_all") if len(tag_shots) > 20 else True
         display_shots = tag_shots if show_all else tag_shots.head(20)
         
         rows_html = ""
@@ -474,7 +474,7 @@ if 'Теги' in df.columns:
         </tr></thead><tbody>{rows_html}</tbody></table>"""
         st.markdown(html, unsafe_allow_html=True)
         if not show_all and len(tag_shots) > 20:
-            st.caption(f"Showing 20 of {len(tag_shots)} shots")
+            st.info(f"⬆️ Showing top 20 of {len(tag_shots)} shots — check **View all** above to see the full list")
 
 # --- PROJECT TYPES ---
 st.divider()
