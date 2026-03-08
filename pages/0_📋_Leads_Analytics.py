@@ -172,8 +172,8 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown("### 📈 Заявки по місяцях")
     if "Месяц" in df.columns and "Relevant" in df.columns:
-        month_data = df.groupby(["Месяц", "Relevant"]).size().reset_index(name="Кол-во")
-        fig = px.bar(month_data, x="Месяц", y="Кол-во", color="Relevant",
+        month_data = df.groupby(["Месяц", "Relevant"]).size().reset_index(name="Count"); month_data["Month"] = month_data["Месяц"].apply(_to_en_month)
+        fig = px.bar(month_data, x="Month", y="Count", color="Relevant",
                      color_discrete_map={"Relevant": "#43e97b", "Unrelevant": "#f5576c", "Unknown": "#b2bec3"},
                      barmode="stack", template="plotly_white")
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
@@ -184,8 +184,8 @@ with col2:
     st.markdown("### 🌍 Географія лідів")
     if "Страна/Город" in filtered.columns:
         geo = filtered["Страна/Город"].value_counts().reset_index()
-        geo.columns = ["Страна", "Кол-во"]
-        fig = px.pie(geo, names="Страна", values="Кол-во", template="plotly_white",
+        geo.columns = ["Country", "Count"]
+        fig = px.pie(geo, names="Country", values="Count", template="plotly_white",
                      color_discrete_sequence=px.colors.qualitative.Set2)
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
@@ -198,22 +198,22 @@ with col_crm:
     st.markdown("### 📊 CRM статус")
     if "CRM статус" in filtered.columns:
         crm = filtered["CRM статус"].value_counts().reset_index()
-        crm.columns = ["Статус", "Кол-во"]
+        crm.columns = ["Status", "Count"]
         color_map = {"Open 💙": "#667eea", "Lost ❌": "#f5576c", "Won ✅": "#43e97b", "No matches 🔄": "#b2bec3"}
-        fig = px.pie(crm, names="Статус", values="Кол-во", template="plotly_white",
-                     color="Статус", color_discrete_map=color_map)
+        fig = px.pie(crm, names="Status", values="Count", template="plotly_white",
+                     color="Status", color_discrete_map=color_map)
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
 with col_budget:
-    st.markdown("### 💰 Бюджеты")
+    st.markdown("### 💰 Budgets")
     if "Бюджет (CRM / ~Dribbble)" in filtered.columns:
         budgets = filtered["Бюджет (CRM / ~Dribbble)"].value_counts().reset_index()
-        budgets.columns = ["Бюджет", "Кол-во"]
+        budgets.columns = ["Budget", "Count"]
         budget_order = ["Unknown", "$1000-$3000", "$3000-$5000", "$5000-$10000", "$10000-$15000", "$15000+"]
-        budgets["sort"] = budgets["Бюджет"].apply(lambda x: next((i for i, o in enumerate(budget_order) if str(x).strip() == o), 99))
+        budgets["sort"] = budgets["Budget"].apply(lambda x: next((i for i, o in enumerate(budget_order) if str(x).strip() == o), 99))
         budgets = budgets.sort_values("sort")
-        fig = px.bar(budgets, x="Бюджет", y="Кол-во", template="plotly_white",
+        fig = px.bar(budgets, x="Budget", y="Count", template="plotly_white",
                      color_discrete_sequence=["#667eea"])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=350, showlegend=False)
@@ -227,12 +227,12 @@ with col3:
     st.markdown("### ⏰ Час першої відповіді")
     if "Время ответа" in filtered.columns:
         time_data = filtered["Время ответа"].value_counts().reset_index()
-        time_data.columns = ["Время", "Кол-во"]
+        time_data.columns = ["Time", "Count"]
         order = ["<30 мин", "<1ч", "<2ч", "<4ч", "<24ч", ">24ч"]
-        time_data["sort"] = time_data["Время"].apply(lambda x: next((i for i, o in enumerate(order) if str(x).strip() == o), 99))
+        time_data["sort"] = time_data["Time"].apply(lambda x: next((i for i, o in enumerate(order) if str(x).strip() == o), 99))
         time_data = time_data.sort_values("sort")
-        fig = px.bar(time_data, x="Время", y="Кол-во", template="plotly_white",
-                     color="Кол-во", color_continuous_scale=["#f5576c", "#43e97b"])
+        fig = px.bar(time_data, x="Time", y="Count", template="plotly_white",
+                     color="Count", color_continuous_scale=["#f5576c", "#43e97b"])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=350, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
@@ -241,8 +241,8 @@ with col4:
     st.markdown("### 🎨 Типи проєктів")
     if "Тип проекта" in filtered.columns:
         types = filtered["Тип проекта"].value_counts().reset_index()
-        types.columns = ["Тип", "Кол-во"]
-        fig = px.pie(types, names="Тип", values="Кол-во", template="plotly_white",
+        types.columns = ["Type", "Count"]
+        fig = px.pie(types, names="Type", values="Count", template="plotly_white",
                      color_discrete_sequence=px.colors.qualitative.Pastel)
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
@@ -252,8 +252,8 @@ st.divider()
 st.markdown("### 🔻 Конверсійна воронка")
 
 funnel_data = {
-    "Этап": ["Все заявки", "VALMAX ответил", "Лид ответил", "Meeting", "Won"],
-    "Кол-во": [
+    "Stage": ["All leads", "VALMAX replied", "Lead replied", "Meeting", "Won"],
+    "Count": [
         len(filtered),
         len(filtered[filtered.get("VALMAX ответил?", pd.Series()) == "Да"]) if "VALMAX ответил?" in filtered.columns else 0,
         len(filtered[filtered.get("Лид ответил?", pd.Series()) == "Да"]) if "Лид ответил?" in filtered.columns else 0,
@@ -262,8 +262,8 @@ funnel_data = {
     ]
 }
 fig = go.Figure(go.Funnel(
-    y=funnel_data["Этап"],
-    x=funnel_data["Кол-во"],
+    y=funnel_data["Stage"],
+    x=funnel_data["Count"],
     textinfo="value+percent initial",
     marker=dict(color=["#667eea", "#764ba2", "#f093fb", "#f5576c", "#43e97b"]),
 ))
@@ -273,11 +273,11 @@ st.plotly_chart(fig, use_container_width=True)
 
 # --- MANAGERS ---
 st.divider()
-st.markdown("### 👨‍💼 Менеджери")
+st.markdown("### 👨‍💼 Managers")
 if "Менеджер" in filtered.columns:
     mgr = filtered["Менеджер"].value_counts().reset_index()
-    mgr.columns = ["Менеджер", "Заявок"]
-    fig = px.bar(mgr, x="Менеджер", y="Заявок", template="plotly_white",
+    mgr.columns = ["Менеджер", "Leads"]
+    fig = px.bar(mgr, x="Менеджер", y="Leads", template="plotly_white",
                  color="Менеджер", color_discrete_sequence=["#667eea", "#f093fb", "#43e97b"])
     fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                      font=dict(color="#636e72"), height=300, showlegend=False)
@@ -285,13 +285,27 @@ if "Менеджер" in filtered.columns:
 
 # --- TABLE ---
 st.divider()
-st.markdown("### 📋 Усі заявки")
+st.markdown("### 📋 All leads")
+# Rename table columns
+table_df = filtered.copy()
+col_renames = {
+    'Месяц': 'Month', 'Дата заявки': 'Date', 'Клиент': 'Client', 
+    'Страна/Город': 'Country', 'Тип проекта': 'Project Type',
+    'Бюджет (CRM / ~Dribbble)': 'Budget', 'Тип': 'Type',
+    'VALMAX ответил?': 'VALMAX replied?', 'Лид ответил?': 'Lead replied?',
+    'Время ответа': 'Response Time', 'Менеджер': 'Manager',
+    'Причина отказа': 'Rejection reason', 'Ссылка Dribbble': 'Dribbble',
+    'Ссылка Pipedrive': 'Pipedrive'
+}
+table_df = table_df.rename(columns={k:v for k,v in col_renames.items() if k in table_df.columns})
+if 'Month' in table_df.columns:
+    table_df['Month'] = table_df['Month'].apply(_to_en_month)
 col_config = {}
-if "Ссылка Dribbble" in filtered.columns:
-    col_config["Ссылка Dribbble"] = st.column_config.LinkColumn("Dribbble", display_text="Open ↗")
-if "Ссылка Pipedrive" in filtered.columns:
-    col_config["Ссылка Pipedrive"] = st.column_config.LinkColumn("Pipedrive", display_text="Open ↗")
-st.dataframe(filtered, use_container_width=True, height=400, column_config=col_config)
+if "Dribbble" in table_df.columns:
+    col_config["Dribbble"] = st.column_config.LinkColumn("Dribbble", display_text="Open ↗")
+if "Pipedrive" in table_df.columns:
+    col_config["Pipedrive"] = st.column_config.LinkColumn("Pipedrive", display_text="Open ↗")
+st.dataframe(table_df, use_container_width=True, height=400, column_config=col_config)
 
 # --- FOOTER ---
 st.divider()
