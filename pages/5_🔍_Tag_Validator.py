@@ -23,7 +23,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- DATA ---
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=120)
 def load_keywords():
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
@@ -40,7 +40,7 @@ def load_keywords():
     except:
         return pd.DataFrame()
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=120)
 def load_seo_data():
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
@@ -57,7 +57,7 @@ def load_seo_data():
     except:
         return {}
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=120)
 def load_serp_data():
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
@@ -74,7 +74,7 @@ def load_serp_data():
     except:
         return {}
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=120)
 def load_tag_positions():
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
@@ -399,7 +399,7 @@ if tag_input:
 # --- FULL KEYWORDS TABLE ---
 st.divider()
 st.markdown("### 📊 Повна база: Keywords де Dribbble в Google Top 20")
-st.caption(f"3,189 keywords де dribbble.com/tags/ ранжується в Google (US). Дані: DataForSEO Ranked Keywords API")
+st.caption(f"Keywords де dribbble.com/tags/ ранжується в Google (US). Дані: DataForSEO Ranked Keywords API")
 
 if not kw_df.empty:
     kw_col1, kw_col2, kw_col3, kw_col4 = st.columns(4)
@@ -444,4 +444,4 @@ if not kw_df.empty:
 
 # --- FOOTER ---
 st.divider()
-st.caption("🔍 Tag Validator | DataForSEO API | 3,189 keywords де Dribbble видно в Google | Оновлюється monthly")
+st.caption(f"🔍 Tag Validator | DataForSEO API | {len(kw_df) if not kw_df.empty else '?'} keywords де Dribbble видно в Google | Оновлюється monthly")
