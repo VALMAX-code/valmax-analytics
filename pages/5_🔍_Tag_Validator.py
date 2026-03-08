@@ -409,27 +409,112 @@ if tag_input:
                     continue
                 vol_r = ki.get('search_volume', 0) or 0
                 cpc_r = ki.get('cpc', 0) or 0
+                # Score each tag for marketers
+                tag_score = 0
+                if vol_r >= 10000: tag_score += 40
+                elif vol_r >= 1000: tag_score += 30
+                elif vol_r >= 100: tag_score += 20
+                elif vol_r >= 10: tag_score += 10
+                
+                if cpc_r >= 10: tag_score += 25
+                elif cpc_r >= 5: tag_score += 20
+                elif cpc_r >= 1: tag_score += 10
+                
+                comp = ki.get('competition_level', '')
+                if comp == 'LOW': tag_score += 20
+                elif comp == 'MEDIUM': tag_score += 10
+                
+                # Verdict
+                if tag_score >= 60: verdict = "🔥 Must use"
+                elif tag_score >= 40: verdict = "👍 Good"
+                elif tag_score >= 25: verdict = "🤔 Maybe"
+                else: verdict = "⚪ Weak"
+                
                 rel_rows.append({
-                    '📋 Tag': kw_name,
+                    'Tag': kw_name,
                     'Volume/mo': vol_r,
                     'CPC ($)': f"${cpc_r:.2f}",
-                    'Competition': ki.get('competition_level', ''),
+                    'Competition': comp,
+                    'Score': tag_score,
+                    'Verdict': verdict,
                 })
             if rel_rows:
-                rel_df = pd.DataFrame(rel_rows).sort_values('Volume/mo', ascending=False)
-                st.dataframe(
-                    rel_df,
-                    column_config={
-                        "📋 Tag": st.column_config.TextColumn("📋 Tag (click to copy)", width="large"),
-                        "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", format="%d"),
-                        "CPC ($)": st.column_config.TextColumn("💰 CPC"),
-                        "Competition": st.column_config.TextColumn("⚔️ Competition"),
-                    },
-                    use_container_width=True, hide_index=True
-                )
+                rel_df = pd.DataFrame(rel_rows).sort_values('Score', ascending=False)
+                
+                # HTML table with copy buttons
+                html_rel = """
+                <style>
+                .rel-table { width:100%; border-collapse:collapse; font-family:sans-serif; font-size:13px; }
+                .rel-table th { background:#667eea; color:white; padding:6px 10px; text-align:left; }
+                .rel-table td { padding:5px 10px; border-bottom:1px solid #eee; }
+                .rel-table tr:hover { background:#f0f2ff; }
+                .cp-btn { background:none; border:1px solid #ddd; border-radius:4px; cursor:pointer; padding:1px 5px; font-size:11px; }
+                .cp-btn:hover { background:#667eea; color:white; }
+                </style>
+                <script>function cpTag(t,b){navigator.clipboard.writeText(t);b.textContent='✅';setTimeout(()=>b.textContent='📋',800);}</script>
+                <table class="rel-table">
+                <tr><th>📋</th><th>🏷️ Tag</th><th>📈 Vol</th><th>💰 CPC</th><th>⚔️ Comp</th><th>⭐ Score</th><th>Verdict</th></tr>
+                """
+                for _, row in rel_df.iterrows():
+                    t = str(row['Tag']).replace("'", "\\'")
+                    html_rel += f"""<tr>
+                        <td><button class="cp-btn" onclick="cpTag('{t}',this)">📋</button></td>
+                        <td>{row['Tag']}</td><td>{row['Volume/mo']:,}</td><td>{row['CPC ($)']}</td>
+                        <td>{row['Competition']}</td><td>{row['Score']}</td><td>{row['Verdict']}</td>
+                    </tr>"""
+                html_rel += "</table>"
+                st.components.v1.html(html_rel, height=min(400, 40 + len(rel_df)*32), scrolling=True)
+                
                 # Copyable tag list
-                all_tags = ", ".join(rel_df['📋 Tag'].tolist())
+                all_tags = ", ".join(rel_df['Tag'].tolist())
                 st.text_area("📋 Копіювати всі теги:", all_tags, height=80)
+                
+                # --- RELATED THEMES ---
+                st.divider()
+                st.markdown("### 🎯 Схожі тематики для Dribbble")
+                st.caption("Ширші теми навколо вашого запиту — для розширення охоплення шотів")
+                
+                # Group related keywords into themes
+                theme_keywords = {
+                    'Banking & Finance': ['bank', 'finance', 'financial', 'banking', 'payment', 'money', 'invest', 'trading', 'stock', 'wallet', 'credit', 'loan'],
+                    'Fintech & Crypto': ['fintech', 'crypto', 'blockchain', 'defi', 'nft', 'web3', 'token', 'bitcoin', 'ethereum'],
+                    'SaaS & Dashboard': ['saas', 'dashboard', 'analytics', 'admin', 'panel', 'crm', 'erp', 'metrics', 'reporting'],
+                    'E-commerce': ['ecommerce', 'e-commerce', 'shop', 'store', 'marketplace', 'cart', 'checkout', 'product'],
+                    'Healthcare': ['health', 'medical', 'clinic', 'hospital', 'telemedicine', 'wellness', 'fitness', 'pharma'],
+                    'Education': ['education', 'learning', 'course', 'school', 'university', 'edtech', 'lms', 'tutorial'],
+                    'Real Estate': ['real estate', 'property', 'housing', 'apartment', 'rental', 'mortgage', 'realty'],
+                    'Travel & Booking': ['travel', 'booking', 'hotel', 'flight', 'tourism', 'vacation', 'trip'],
+                    'Food & Delivery': ['food', 'restaurant', 'delivery', 'recipe', 'menu', 'cooking', 'grocery'],
+                    'AI & Tech': ['ai', 'artificial intelligence', 'machine learning', 'automation', 'chatbot', 'robot'],
+                    'Mobile App': ['mobile', 'app', 'ios', 'android', 'smartphone', 'tablet'],
+                    'Branding & Identity': ['brand', 'logo', 'identity', 'branding', 'visual', 'corporate'],
+                }
+                
+                # Find which themes match the input and related keywords
+                all_kw_text = ' '.join([tag_space] + [r['Tag'] for r in rel_rows]).lower()
+                matched_themes = []
+                for theme, keywords in theme_keywords.items():
+                    matches = [k for k in keywords if k in all_kw_text]
+                    if matches:
+                        # Build suggested Dribbble tags for this theme
+                        theme_tags = [f"{tag_space} {k}" for k in keywords[:5] if k not in tag_space]
+                        matched_themes.append({
+                            'theme': theme,
+                            'match_count': len(matches),
+                            'matched': ', '.join(matches),
+                            'suggested_tags': theme_tags[:4]
+                        })
+                
+                matched_themes.sort(key=lambda x: -x['match_count'])
+                
+                if matched_themes:
+                    for t in matched_themes:
+                        st.markdown(f"**{t['theme']}** ({t['match_count']} збігів: {t['matched']})")
+                        tag_suggestions = ' · '.join([f'`{s}`' for s in t['suggested_tags']])
+                        if tag_suggestions:
+                            st.markdown(f"  Теги для шотів: {tag_suggestions}")
+                else:
+                    st.info("Не вдалося визначити тематику")
             else:
                 st.info("Немає схожих keywords")
         else:
