@@ -71,9 +71,15 @@ def _month_sort_key(m):
     _mo = {'Січень':1,'Лютий':2,'Березень':3,'Квітень':4,'Травень':5,'Червень':6,
            'Липень':7,'Серпень':8,'Вересень':9,'Жовтень':10,'Листопад':11,'Грудень':12,
            'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
-           'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
+           'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12,
+           'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,
+           'July':7,'August':8,'September':9,'October':10,'November':11,'December':12}
     p = str(m).split()
-    return int(p[1])*100+_mo.get(p[0],0) if len(p)==2 and p[0] in _mo else 0
+    if len(p)==2 and p[0] in _mo:
+        return int(p[1])*100+_mo.get(p[0],0)
+    if len(p)==1 and p[0] in _mo:
+        return _mo.get(p[0],0)
+    return 0
 _ru_to_en_m = {'Январь':'January','Февраль':'February','Март':'March','Апрель':'April',
                'Май':'May','Июнь':'June','Июль':'July','Август':'August',
                'Сентябрь':'September','Октябрь':'October','Ноябрь':'November','Декабрь':'December'}
@@ -81,6 +87,8 @@ def _to_en_month(m):
     parts = str(m).split()
     if len(parts) == 2 and parts[0] in _ru_to_en_m:
         return f"{_ru_to_en_m[parts[0]]} {parts[1]}"
+    if len(parts) == 1 and parts[0] in _ru_to_en_m:
+        return _ru_to_en_m[parts[0]]
     return m
 
 if "Месяц" in df.columns:
