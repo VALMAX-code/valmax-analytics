@@ -7,11 +7,7 @@ import numpy as np
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
-# --- Multi-page nav ---
-st.sidebar.markdown("## 🧭 Навигация")
-st.sidebar.markdown("[📋 Leads Analytics](/)")
-st.sidebar.markdown("📸 **Shots Analytics** ← вы здесь")
-st.sidebar.divider()
+
 
 # --- Modern Light Theme CSS ---
 st.markdown("""
@@ -109,38 +105,52 @@ df, profile, monthly = load_data()
 
 # --- HEADER ---
 st.markdown("# 📸 VALMAX Shots Analytics")
-st.markdown("Аналитика по шотам на Dribbble")
+st.markdown("Аналітика по шотам на Dribbble")
 
 # --- PROFILE STATS ---
 st.divider()
 p1, p2, p3, p4, p5 = st.columns(5)
-p1.metric("📊 Всего шотов", len(df))
-p2.metric("👥 Подписчики", profile.get('Подписчики', '?'))
-p3.metric("👁️ Всего просмотров", f"{df['Просмотры'].sum():,}")
-p4.metric("❤️ Всего лайков", f"{df['Лайки'].sum():,}")
-p5.metric("💾 Всего сохранений", f"{df['Сохранения'].sum():,}")
+p1.metric("📊 Усього шотів", len(df))
+p2.metric("👥 Підписники", profile.get('Подписчики', '?'))
+p3.metric("👁️ Усього переглядів", f"{df['Просмотры'].sum():,}")
+p4.metric("❤️ Усього лайків", f"{df['Лайки'].sum():,}")
+p5.metric("💾 Усього збережень", f"{df['Сохранения'].sum():,}")
 
 # --- FILTERS ---
 st.divider()
 col_f1, col_f2, col_f3 = st.columns(3)
 
-months_available = ["Все"] + sorted(df["Месяц"].unique().tolist(), key=lambda x: x, reverse=True) if "Месяц" in df.columns else ["Все"]
+if "Месяц" in df.columns:
+    # Sort months: newest first (by year desc, month desc)
+    month_order_map = {'Січень':1,'Лютий':2,'Березень':3,'Квітень':4,'Травень':5,'Червень':6,
+                       'Липень':7,'Серпень':8,'Вересень':9,'Жовтень':10,'Листопад':11,'Грудень':12,
+                       'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
+                       'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
+    def month_sort_val(m):
+        parts = str(m).split()
+        if len(parts) == 2 and parts[0] in month_order_map:
+            return int(parts[1]) * 100 + month_order_map[parts[0]]
+        return 0
+    sorted_months_list = sorted(df["Месяц"].unique().tolist(), key=month_sort_val, reverse=True)
+    months_available = ["Усі"] + sorted_months_list
+else:
+    months_available = ["Усі"]
 with col_f1:
-    month_filter = st.selectbox("📅 Месяц", months_available)
+    month_filter = st.selectbox("📅 Місяць", months_available)
 
-sort_options = {"Просмотры ↓": ("Просмотры", False), "Просмотры ↑": ("Просмотры", True), 
+sort_options = {"Перегляди ↓": ("Просмотры", False), "Перегляди ↑": ("Просмотры", True), 
                 "Лайки ↓": ("Лайки", False), "Лайки ↑": ("Лайки", True),
-                "Сохранения ↓": ("Сохранения", False), "Engagement ↓": ("Engagement", False),
+                "Збереження ↓": ("Сохранения", False), "Engagement ↓": ("Engagement", False),
                 "Дата ↓": ("Date", False), "Дата ↑": ("Date", True)}
 with col_f2:
-    sort_choice = st.selectbox("🔄 Сортировка", list(sort_options.keys()))
+    sort_choice = st.selectbox("🔄 Сортування", list(sort_options.keys()))
 
 with col_f3:
-    min_views = st.number_input("Мин. просмотров", min_value=0, value=0, step=1000)
+    min_views = st.number_input("Мін. переглядів", min_value=0, value=0, step=1000)
 
 # Apply filters
 filtered = df.copy()
-if month_filter != "Все":
+if month_filter != "Усі":
     filtered = filtered[filtered["Месяц"] == month_filter]
 if min_views > 0:
     filtered = filtered[filtered["Просмотры"] >= min_views]
@@ -152,17 +162,17 @@ if sort_col in filtered.columns:
 # Filtered metrics
 st.divider()
 fc1, fc2, fc3, fc4, fc5, fc6 = st.columns(6)
-fc1.metric("Шотов", len(filtered))
-fc2.metric("Просмотры", f"{filtered['Просмотры'].sum():,}")
+fc1.metric("Шотів", len(filtered))
+fc2.metric("Перегляди", f"{filtered['Просмотры'].sum():,}")
 fc3.metric("Лайки", f"{filtered['Лайки'].sum():,}")
-fc4.metric("Сохранения", f"{filtered['Сохранения'].sum():,}")
-fc5.metric("Комментарии", f"{filtered['Комментарии'].sum():,}")
+fc4.metric("Збереження", f"{filtered['Сохранения'].sum():,}")
+fc5.metric("Коментарі", f"{filtered['Комментарии'].sum():,}")
 avg_eng = filtered['Engagement'].mean() if 'Engagement' in filtered.columns and len(filtered) > 0 else 0
 fc6.metric("Avg Engagement", f"{avg_eng:.2f}%")
 
 # --- MONTHLY DYNAMICS ---
 st.divider()
-st.markdown("### 📈 Динамика по месяцам")
+st.markdown("### 📈 Динаміка по місяцях")
 
 if monthly:
     # Create monthly dataframe
@@ -186,11 +196,11 @@ if monthly:
     # Take last 12 months
     mdf_recent = mdf.tail(12)
     
-    tab1, tab2, tab3, tab4 = st.tabs(["Просмотры", "Лайки", "Шоты/мес", "Avg Views/Shot"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Перегляди", "Лайки", "Шотів/міс", "Avg Views/Shot"])
     
     with tab1:
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Просмотры'], name='Просмотры',
+        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Просмотры'], name='Перегляди',
                             marker_color='#667eea'))
         fig.add_trace(go.Scatter(x=mdf_recent['Месяц'], y=mdf_recent['Просмотры'], name='Тренд',
                                 line=dict(color='#43e97b', width=2), mode='lines+markers'))
@@ -201,8 +211,8 @@ if monthly:
     with tab2:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Лайки'], name='Лайки', marker_color='#f093fb'))
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Сохранения'], name='Сохранения', marker_color='#feca57'))
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Комментарии'], name='Комменты', marker_color='#43e97b'))
+        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Сохранения'], name='Збереження', marker_color='#feca57'))
+        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Комментарии'], name='Коментарі', marker_color='#43e97b'))
         fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
                          plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=400, barmode='group')
         st.plotly_chart(fig, use_container_width=True)
@@ -228,7 +238,7 @@ if monthly:
         st.plotly_chart(fig, use_container_width=True)
 
     # Month-over-month growth
-    st.markdown("### 📊 Рост месяц-к-месяцу")
+    st.markdown("### 📊 Зростання місяць-до-місяця")
     if len(mdf_recent) >= 2:
         growth_rows = []
         for i in range(1, len(mdf_recent)):
@@ -249,7 +259,7 @@ if monthly:
 
 # --- TOP SHOTS ---
 st.divider()
-st.markdown("### 🏆 Топ шоты")
+st.markdown("### 🏆 Топ шоти")
 
 top_col1, top_col2 = st.columns(2)
 
@@ -267,7 +277,7 @@ with top_col2:
 
 # --- ENGAGEMENT ANALYSIS ---
 st.divider()
-st.markdown("### 🎯 Engagement анализ")
+st.markdown("### 🎯 Engagement аналіз")
 
 eng_col1, eng_col2 = st.columns(2)
 
@@ -354,7 +364,7 @@ if 'Теги' in df.columns:
 
 # --- PROJECT TYPES ---
 st.divider()
-st.markdown("### 🎨 Типы проектов")
+st.markdown("### 🎨 Типи проєктів")
 
 def classify_shot(name):
     name = str(name).lower()
@@ -397,11 +407,11 @@ if 'Название' in df.columns:
 
 # --- ALL SHOTS TABLE ---
 st.divider()
-st.markdown("### 📋 Все шоты")
+st.markdown("### 📋 Усі шоти")
 display_cols = ['Месяц', 'Дата', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
 available_cols = [c for c in display_cols if c in filtered.columns]
 st.dataframe(filtered[available_cols], use_container_width=True, height=500)
 
 # --- FOOTER ---
 st.divider()
-st.caption("📸 VALMAX Dribbble Shots Analytics | Обновляется еженедельно (пн 8:00 CET)")
+st.caption("📸 VALMAX Dribbble Shots Analytics | Оновлюється щотижня (пн 8:00 CET)")
