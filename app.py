@@ -7,9 +7,9 @@ pages = st.navigation({
     "VALMAX Analytics": [
         st.Page("pages/0_📋_Leads_Analytics.py", title="Leads Analytics", icon="📋"),
         st.Page("pages/1_📸_Shots_Analytics.py", title="Shots Analytics", icon="📸"),
+        st.Page("pages/4_🏎️_Race.py", title="Monthly Race", icon="🏎️"),
         st.Page("pages/2_🏆_Competitors.py", title="Competitors", icon="🏆"),
         st.Page("pages/3_🏷️_Tag_Positions.py", title="Tag Positions", icon="🏷️"),
-        st.Page("pages/4_🏎️_Race.py", title="Race", icon="🏎️"),
         st.Page("pages/5_🔍_Tag_Validator.py", title="Tag Validator", icon="🔍"),
     ]
 })
