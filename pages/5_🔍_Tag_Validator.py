@@ -362,13 +362,12 @@ if tag_input:
     st.markdown("### 💡 Рекомендовані теги (схожі)")
     st.caption("Теги з бази keywords Dribbble, які пов'язані з вашим запитом і мають трафік")
     
-    # Broader search: match any word from the tag
+    # Broader search: match words from the tag, prioritize keywords with ALL words
     if kw_partial.empty and not kw_df.empty:
-        words = tag_space.split()
+        words = [w for w in tag_space.split() if len(w) > 2]
         mask = pd.Series([False] * len(kw_df))
         for w in words:
-            if len(w) > 2:  # skip short words
-                mask = mask | kw_df['Keyword'].str.lower().str.contains(w, na=False)
+            mask = mask | kw_df['Keyword'].str.lower().str.contains(w, na=False)
         kw_partial = kw_df[mask]
     
     if not kw_partial.empty:
@@ -376,7 +375,15 @@ if tag_input:
             (kw_partial['Keyword'].str.lower() != tag) & 
             (kw_partial['Keyword'].str.lower() != tag_hyphen) &
             (kw_partial['Keyword'].str.lower() != tag_space)
-        ].sort_values('Est. Traffic/mo', ascending=False).head(20)
+        ].copy()
+        
+        # Score: how many input words appear in each keyword (more = more relevant)
+        words = [w for w in tag_space.split() if len(w) > 2]
+        related['_relevance'] = related['Keyword'].str.lower().apply(
+            lambda k: sum(1 for w in words if w in k)
+        )
+        related = related.sort_values(['_relevance', 'Est. Traffic/mo'], ascending=[False, False]).head(20)
+        related = related.drop(columns=['_relevance'])
         if not related.empty:
             st.dataframe(
                 related[['Keyword', 'Volume/mo', 'Google Pos', 'Est. Traffic/mo', 'CPC ($)', 'Tag Page', 'Landing URL']],
