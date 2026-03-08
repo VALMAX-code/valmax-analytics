@@ -123,6 +123,83 @@ p3.metric("👁️ Усього переглядів", f"{df['Просмотры
 p4.metric("❤️ Усього лайків", f"{df['Лайки'].sum():,}")
 p5.metric("💾 Усього збережень", f"{df['Сохранения'].sum():,}")
 
+# --- ⭐ POPULAR TRACKER ---
+st.divider()
+st.markdown("### ⭐ Popular Tracker")
+st.caption("Чи потрапляють шоти VALMAX у Dribbble Popular? Перевірка 15 категорій × top 96 шотів. Timeframes: All Time / Week / Month")
+
+@st.cache_data(ttl=300)
+def load_popular():
+    try:
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds2 = Credentials.from_service_account_info(creds_dict, scopes=[
+            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/drive.readonly'
+        ])
+        gc2 = gspread.authorize(creds2)
+        sh2 = gc2.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
+        ws_pop = sh2.worksheet("⭐ Popular Tracker")
+        return pd.DataFrame(ws_pop.get_all_records())
+    except:
+        return pd.DataFrame()
+
+pop_df = load_popular()
+if not pop_df.empty:
+    found_in_popular = pop_df[pop_df['VALMAX Found'] == 'Yes']
+    not_found = pop_df[pop_df['VALMAX Found'] == 'No']
+    
+    p_col1, p_col2, p_col3, p_col4 = st.columns(4)
+    p_col1.metric("⭐ In Popular", len(found_in_popular), help="Кількість категорій де VALMAX є в Popular")
+    p_col2.metric("📊 Categories Checked", len(pop_df))
+    if len(found_in_popular) > 0:
+        best_pos = found_in_popular['Position'].min()
+        p_col3.metric("🏆 Best Position", f"#{best_pos}")
+        unique_shots = found_in_popular['Shot Name'].nunique()
+        p_col4.metric("📸 Unique Shots", unique_shots)
+    
+    if len(found_in_popular) > 0:
+        st.markdown("**🔥 VALMAX в Popular:**")
+        st.dataframe(
+            found_in_popular[['Category', 'Position', 'Shot Name', 'Total Shots', 'Check Date']],
+            column_config={
+                "Category": st.column_config.TextColumn("📂 Category", width="large"),
+                "Position": st.column_config.NumberColumn("📍 Position", help="Позиція шота в Popular видачі"),
+                "Shot Name": st.column_config.TextColumn("📸 Shot", width="large"),
+                "Total Shots": st.column_config.NumberColumn("📊 Total", help="Скільки шотів на сторінці Popular"),
+                "Check Date": st.column_config.TextColumn("🕐 Checked"),
+            },
+            use_container_width=True, hide_index=True
+        )
+        
+        st.markdown("""
+        **🚀 Як раскачати шот, який потрапив в Popular:**
+        - 📣 **Негайно поширити** — Instagram Stories, Telegram, Twitter, LinkedIn
+        - 💬 **Відповідайте на коментарі** — engagement підвищує позицію в Popular
+        - 🔄 **Попросіть команду поставити likes + saves** — перші 12-24 год критичні
+        - 📸 **Додайте attachment/file** — шоти з файлами отримують більше saves
+        - 🏷️ **Перевірте теги** — впевніться що шот в правильних категоріях Popular
+        - 👥 **Follow активних дизайнерів** — вони побачать ваш шот і можуть залайкати
+        - 📌 **Pin shot** на профілі VALMAX — нові відвідувачі побачать його першим
+        """)
+    
+    if len(not_found) > 0:
+        with st.expander(f"❌ Not found in {len(not_found)} categories"):
+            st.dataframe(not_found[['Category', 'Total Shots', 'Check Date']], 
+                        use_container_width=True, hide_index=True)
+    
+    with st.expander("💡 Як потрапити в Popular"):
+        st.markdown("""
+        - 🔥 **Engagement в перші 24-72 години** — likes, saves, comments визначають потрапляння
+        - 📸 **Preview image** — перший кадр має бути WOW (люди скролять швидко)
+        - 🏷️ **Правильні теги** — Popular фільтрується по категоріях (Web Design, Product Design, Mobile, Branding)
+        - ⏰ **Час публікації** — пікові години: вт-чт, 10:00-14:00 UTC
+        - 👥 **Follow-база** — ваші 4K followers бачать шот першими і створюють початковий engagement
+        - 💬 **Community** — коментуйте чужі шоти, це збільшує видимість вашого профілю
+        - 📊 **Benchmark: #38 = найкраща поточна позиція** — потрібно більше engagement для top 20
+        """)
+else:
+    st.info("No Popular data yet. Run the Popular checker first.")
+
 # --- FILTERS ---
 st.divider()
 st.markdown("#### 🔍 Фільтри")
@@ -570,69 +647,6 @@ with seo_col2:
     st.dataframe(seo_df, use_container_width=True, hide_index=True, height=380)
 
 st.caption("💡 **Інсайт:** VALMAX індексується по бренду, але НЕ з'являється по комерційних запитах. Конкуренти (Outcrowd, QClay, Nixtio, Phenomenon) видні по ключових нішах. Це зона росту — потрібно оптимізувати назви шотів та теги під пошукові запити.")
-
-# --- ⭐ POPULAR TRACKER ---
-st.divider()
-st.markdown("### ⭐ Popular Tracker")
-st.caption("Чи потрапляють шоти VALMAX у Dribbble Popular? Перевірка top 96 шотів у кожній категорії.")
-
-@st.cache_data(ttl=300)
-def load_popular():
-    try:
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        creds2 = Credentials.from_service_account_info(creds_dict, scopes=[
-            'https://www.googleapis.com/auth/spreadsheets.readonly',
-            'https://www.googleapis.com/auth/drive.readonly'
-        ])
-        gc2 = gspread.authorize(creds2)
-        sh2 = gc2.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
-        ws_pop = sh2.worksheet("⭐ Popular Tracker")
-        return pd.DataFrame(ws_pop.get_all_records())
-    except:
-        return pd.DataFrame()
-
-pop_df = load_popular()
-if not pop_df.empty:
-    found_in_popular = pop_df[pop_df['VALMAX Found'] == 'Yes']
-    not_found = pop_df[pop_df['VALMAX Found'] == 'No']
-    
-    p_col1, p_col2, p_col3 = st.columns(3)
-    p_col1.metric("⭐ In Popular", len(found_in_popular), help="Кількість категорій де VALMAX є в Popular")
-    p_col2.metric("📊 Categories Checked", len(pop_df))
-    if len(found_in_popular) > 0:
-        best_pos = found_in_popular['Position'].min()
-        p_col3.metric("🏆 Best Position", f"#{best_pos}")
-    
-    if len(found_in_popular) > 0:
-        st.markdown("**🔥 VALMAX в Popular:**")
-        st.dataframe(
-            found_in_popular[['Category', 'Position', 'Shot Name', 'Total Shots', 'Check Date']],
-            column_config={
-                "Category": st.column_config.TextColumn("📂 Category"),
-                "Position": st.column_config.NumberColumn("📍 Position", help="Позиція шота в Popular видачі"),
-                "Shot Name": st.column_config.TextColumn("📸 Shot"),
-                "Total Shots": st.column_config.NumberColumn("📊 Total", help="Скільки шотів на сторінці Popular"),
-                "Check Date": st.column_config.TextColumn("🕐 Checked"),
-            },
-            use_container_width=True, hide_index=True
-        )
-    
-    if len(not_found) > 0:
-        with st.expander(f"❌ Not found in {len(not_found)} categories"):
-            st.dataframe(not_found[['Category', 'Total Shots', 'Check Date']], 
-                        use_container_width=True, hide_index=True)
-    
-    st.caption("""
-    **Як потрапити в Popular:**
-    - 🔥 Високий engagement в перші 24-72 години (likes, saves, comments)
-    - 📸 Якісний preview image (перший кадр привертає увагу)
-    - 🏷️ Правильні теги — Popular фільтрується по категоріях
-    - ⏰ Час публікації — пікові години: вт-чт, 10:00-14:00 UTC
-    - 👥 Follow-база — ваші followers бачать шот першими і створюють початковий engagement
-    - 💬 Community — коментуйте чужі шоти, це збільшує видимість вашого профілю
-    """)
-else:
-    st.info("No Popular data yet. Run the Popular checker first.")
 
 # --- ALL SHOTS TABLE ---
 st.divider()
