@@ -308,7 +308,6 @@ if len(funnel_counts) >= 5:
         conv = round(curr / prev * 100) if prev > 0 else 0
         drop_text.append(f"**{funnel_stages[i-1]}** → **{funnel_stages[i]}**: {conv}%")
     st.caption(" · ".join(drop_text))
-st.plotly_chart(fig, use_container_width=True)
 
 # --- MANAGERS ---
 st.divider()
