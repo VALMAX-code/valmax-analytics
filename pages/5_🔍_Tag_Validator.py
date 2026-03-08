@@ -245,9 +245,9 @@ if tag_input:
     if tag_competition == 0:
         import requests as req2
         try:
-            # Dribbble tag pages load more via ?page=N, check first 4 pages (96 shots)
+            # Dribbble tag pages load more via ?page=N, check up to ~100 shots (5 pages × ~24)
             total_ids = set()
-            for pg in range(1, 5):
+            for pg in range(1, 6):
                 tag_url = f"https://dribbble.com/tags/{tag_hyphen}?page={pg}"
                 resp_tag = req2.get(tag_url, timeout=10, headers={
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -288,7 +288,7 @@ if tag_input:
     
     k6, k7, k8 = st.columns(3)
     k6.metric("💰 CPC (Commercial)", f"${cpc:.2f}" if cpc else "No data")
-    k7.metric("⚔️ Competition", f"{tag_competition} shots" if tag_competition else "Unknown")
+    k7.metric("⚔️ Dribbble Competition", f"{tag_competition} shots" if tag_competition else "Unknown", help="Кількість шотів на Dribbble з цим тегом (до 100)")
     
     # Overall score
     score = 0
@@ -309,9 +309,10 @@ if tag_input:
     if cpc >= 15: score += 15; reasons.append("💰 Дуже комерційний запит (CPC $15+)")
     elif cpc >= 5: score += 10; reasons.append("💰 Комерційний запит (CPC $5+)")
     
-    if tag_competition and tag_competition < 15: score += 15; reasons.append("⚔️ Низька конкуренція на Dribbble")
-    elif tag_competition and tag_competition < 24: score += 5; reasons.append("⚔️ Середня конкуренція")
-    elif tag_competition >= 24: reasons.append("⚔️ Повна сторінка — висока конкуренція")
+    if tag_competition and tag_competition < 24: score += 15; reasons.append("⚔️ Мало шотів на Dribbble — легко потрапити в топ")
+    elif tag_competition and tag_competition < 50: score += 10; reasons.append("⚔️ Середня конкуренція на Dribbble")
+    elif tag_competition and tag_competition < 80: score += 5; reasons.append("⚔️ Висока конкуренція на Dribbble")
+    elif tag_competition and tag_competition >= 80: reasons.append("⚔️ Дуже висока конкуренція на Dribbble (80+ шотів)")
     
     # VALMAX relevance
     valmax_kws = ['dashboard', 'saas', 'fintech', 'healthcare', 'crm', 'analytics', 'web design', 
