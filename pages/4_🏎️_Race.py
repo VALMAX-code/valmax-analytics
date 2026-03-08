@@ -258,8 +258,8 @@ if valmax_row is not None:
 st.divider()
 
 # --- POPULAR LEADERBOARD ---
-st.markdown("### ⭐ Popular Leaderboard — хто в Popular цього тижня?")
-st.caption("Конкуренти в Dribbble Popular (Weekly) по категоріях. Хто нас обходить?")
+st.markdown("### ⭐ Popular Leaderboard")
+st.caption("Конкуренти в Dribbble Popular по категоріях. Хто нас обходить? Оновлюється щоденно.")
 
 @st.cache_data(ttl=300)
 def load_popular_competitors():
@@ -277,6 +277,14 @@ def load_popular_competitors():
         return pd.DataFrame()
 
 pop_comp = load_popular_competitors()
+if not pop_comp.empty:
+    # Timeframe filter
+    timeframes = ["All (all timeframes)"] + sorted(pop_comp['Category'].unique().tolist())
+    selected_tf = st.selectbox("📅 Timeframe", timeframes)
+    
+    if selected_tf != "All (all timeframes)":
+        pop_comp = pop_comp[pop_comp['Category'] == selected_tf]
+
 if not pop_comp.empty:
     # Summary: who appears most across categories
     summary = pop_comp.groupby('Profile').agg(
@@ -322,7 +330,7 @@ if not pop_comp.empty:
                 emoji = "🟢" if row['Profile'] == 'VALMAX' else "⚪"
                 st.markdown(f"  {emoji} {row['Profile']} — {row['Positions']} ({row['Appearances']}x)")
     
-    st.caption("Дані: Dribbble Popular (Weekly timeframe) по 5 категоріях: All, Web Design, Product Design, Mobile, Branding")
+    st.caption("Дані: Dribbble Popular по 7 timeframes (Today, Week, Month × 5 категорій). Оновлюється щоденно о 12:00 CET (пн-пт)")
 
 st.divider()
 
