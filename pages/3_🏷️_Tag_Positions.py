@@ -437,9 +437,18 @@ def calc_perspectiveness(tag, position, total_on_page):
     tag_seo = seo_data.get(tag, seo_data.get(tag_lower, {}))
     
     # Real volume from DataForSEO
-    volume = tag_seo.get('volume', tag_seo.get('Volume/mo', 0)) or 0
-    cpc = tag_seo.get('cpc', tag_seo.get('CPC ($)', 0)) or 0
-    dribbble_gpos = tag_seo.get('Dribbble Google Pos', 0) or 0
+    try:
+        volume = float(tag_seo.get('volume', tag_seo.get('Volume/mo', 0)) or 0)
+    except (ValueError, TypeError):
+        volume = 0
+    try:
+        cpc = float(tag_seo.get('cpc', tag_seo.get('CPC ($)', 0)) or 0)
+    except (ValueError, TypeError):
+        cpc = 0
+    try:
+        dribbble_gpos = int(tag_seo.get('Dribbble Google Pos', 0) or 0)
+    except (ValueError, TypeError):
+        dribbble_gpos = 0
     
     # 1. Position score (25%) — goal is top 12
     if position <= 12:
