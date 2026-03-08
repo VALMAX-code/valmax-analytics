@@ -673,7 +673,7 @@ if len(top_opps) > 0:
     fig = go.Figure(go.Bar(
         x=top_opps_sorted['Score'], y=top_opps_sorted['Tag'], orientation='h',
         marker_color=['#f5576c' if s >= 70 else '#ffa726' if s >= 50 else '#667eea' for s in top_opps_sorted['Score']],
-        text=[f"#{p} → Score {s}" for p, s in zip(top_opps_sorted['Position'], top_opps_sorted['Score'])],
+        text=[f"#{p} → Score {s}" for p, s in zip(top_opps_sorted['Our Position'], top_opps_sorted['Score'])],
         textposition='outside'
     ))
     fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
