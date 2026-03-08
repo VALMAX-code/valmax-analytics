@@ -637,7 +637,7 @@ st.caption("""
 **Колонки:**
 - **📍 Our Pos** — позиція шота VALMAX на сторінці тегу Dribbble (ціль: потрапити в top 12)
 - **⚔️ Shots** — кількість шотів на сторінці (24 = повна, висока конкуренція)
-- **🔍 Dribbble #** — позиція dribbble.com в Google по цьому запиту (реальні дані DataForSEO SERP)
+- **🔍 Dribbble #** — позиція dribbble.com в Google top 20 по цьому запиту (якщо "—" = Dribbble не в top 20). Дані: DataForSEO SERP API
 - **📈 Vol/mo** — скільки людей шукають цей запит в Google щомісяця
 - **🚀 Traffic** — потенційний трафік на Dribbble = Volume × CTR по позиції в Google
 - **💰 Intent** — комерційність: 🔥High ($15+ CPC), 💰Med ($5+), 📊Low ($1+)
