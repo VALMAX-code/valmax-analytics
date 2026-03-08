@@ -384,19 +384,175 @@ st.dataframe(
     height=600
 )
 
-# --- OPPORTUNITY TAGS ---
+# --- TAG PERSPECTIVENESS SCORE ---
 st.divider()
-st.markdown("### 💡 Opportunity Tags")
-st.caption("Теги де VALMAX близько до #1 — невеликі покращення (більше лайків/saves) можуть підняти позицію. Gap to #1 = скільки позицій до першого місця")
+st.markdown("### 🎯 Tag Perspectiveness Score")
+st.caption("Формула перспективності тегу для бізнесу VALMAX. Score 0-100: чим вище — тим більше потенціал для росту.")
 
-opportunities = filtered[(filtered['Position'] > 1) & (filtered['Position'] <= 5)].sort_values('Position')
-if len(opportunities) > 0:
-    opp_display = opportunities[['Tag', 'Position', 'Shot Name', 'Views']].copy()
-    opp_display['Gap to #1'] = opp_display['Position'] - 1
-    opp_display['Views'] = opp_display['Views'].apply(lambda v: f"{v:,}")
-    st.dataframe(opp_display, use_container_width=True, hide_index=True, height=400)
+# Commercial value keywords (high = clients search these)
+COMMERCIAL_HIGH = ['dashboard', 'saas', 'fintech', 'healthcare', 'crm', 'analytics', 'ecommerce', 
+                   'e-commerce', 'b2b', 'startup', 'platform', 'management', 'admin', 'portal',
+                   'banking', 'insurance', 'logistics', 'hr', 'erp', 'marketplace', 'subscription',
+                   'payment', 'trading', 'investment', 'real estate', 'mortgage', 'enterprise']
+COMMERCIAL_MED = ['web design', 'website', 'landing', 'mobile app', 'app design', 'ui design',
+                  'brand', 'branding', 'logo', 'identity', 'corporate', 'business', 'agency',
+                  'product design', 'ux', 'interface', 'responsive', 'modern', 'clean']
+COMMERCIAL_LOW = ['skiing', 'snowboarding', 'nature', 'sports', 'gaming', 'tournament',
+                  'scoreboard', 'fitness', 'food', 'recipe', 'travel', 'music', 'art',
+                  'illustration', 'animation', 'motion', 'scroll', '3d']
+
+# VALMAX service relevance
+VALMAX_RELEVANT = ['dashboard', 'saas', 'web design', 'website', 'landing', 'ui', 'ux', 'uxui',
+                   'b2b', 'crm', 'analytics', 'admin', 'platform', 'fintech', 'healthcare',
+                   'ecommerce', 'e-commerce', 'branding', 'brand identity', 'corporate',
+                   'startup', 'product design', 'data', 'management', 'enterprise', 'portal',
+                   'clean design', 'modern', 'responsive', 'mobile app']
+
+def calc_perspectiveness(tag, position, total_on_page):
+    tag_lower = tag.lower()
+    
+    # 1. Position score (25%) — goal is top 12
+    if position <= 12:
+        pos_score = 0  # Already achieved
+    elif position <= 15:
+        pos_score = 90  # Almost there
+    elif position <= 20:
+        pos_score = 70
+    elif position <= 25:
+        pos_score = 50
+    elif position <= 50:
+        pos_score = 30
+    else:
+        pos_score = 10  # Far from goal
+    
+    # 2. Tag popularity (20%) — more shots = more traffic
+    pop_score = min(total_on_page / 25 * 100, 100)
+    
+    # 3. Commercial value (25%)
+    if any(k in tag_lower for k in COMMERCIAL_HIGH):
+        comm_score = 100
+    elif any(k in tag_lower for k in COMMERCIAL_MED):
+        comm_score = 60
+    elif any(k in tag_lower for k in COMMERCIAL_LOW):
+        comm_score = 10
+    else:
+        comm_score = 30  # Unknown = medium-low
+    
+    # 4. Google visibility (15%) — tag pages with more shots rank better
+    google_score = min(total_on_page / 25 * 80, 80)  # Proxy: popular tags are indexed
+    if any(k in tag_lower for k in ['dashboard', 'saas', 'fintech', 'web design', 'branding']):
+        google_score = 100  # Known indexed categories
+    
+    # 5. VALMAX relevance (15%)
+    if any(k in tag_lower for k in VALMAX_RELEVANT):
+        rel_score = 100
+    else:
+        rel_score = 15
+    
+    total = (pos_score * 0.25 + pop_score * 0.20 + comm_score * 0.25 + 
+             google_score * 0.15 + rel_score * 0.15)
+    
+    return round(total, 1), pos_score, pop_score, comm_score, google_score, rel_score
+
+# Calculate for all tags (best position per tag)
+tag_best = df.groupby('Tag').agg(
+    best_position=('Position', 'min'),
+    total_on_page=('Total on Page', 'max'),
+    shot=('Shot Name', 'first'),
+    views=('Views', 'max')
+).reset_index()
+
+scores = []
+for _, row in tag_best.iterrows():
+    total, pos_s, pop_s, comm_s, goog_s, rel_s = calc_perspectiveness(
+        row['Tag'], row['best_position'], row['total_on_page']
+    )
+    scores.append({
+        'Tag': row['Tag'],
+        'Position': row['best_position'],
+        'Score': total,
+        'Pos (25%)': pos_s,
+        'Popular (20%)': pop_s,
+        'Commercial (25%)': comm_s,
+        'Google (15%)': goog_s,
+        'Relevant (15%)': rel_s,
+        'Shot': row['shot'],
+        'Views': row['views'],
+        'Status': '✅ Achieved' if row['best_position'] <= 12 else '🎯 Opportunity'
+    })
+
+score_df = pd.DataFrame(scores).sort_values('Score', ascending=False)
+
+# Filters
+score_col1, score_col2 = st.columns(2)
+with score_col1:
+    status_filter = st.selectbox("Статус", ["🎯 Opportunities only", "All", "✅ Achieved only"])
+with score_col2:
+    min_score = st.slider("Min Score", 0, 100, 30)
+
+if status_filter == "🎯 Opportunities only":
+    score_filtered = score_df[score_df['Status'] == '🎯 Opportunity']
+elif status_filter == "✅ Achieved only":
+    score_filtered = score_df[score_df['Status'] == '✅ Achieved']
 else:
-    st.info("No opportunity tags in current filter")
+    score_filtered = score_df
+
+score_filtered = score_filtered[score_filtered['Score'] >= min_score]
+
+# KPIs
+s_col1, s_col2, s_col3, s_col4 = st.columns(4)
+achieved = len(score_df[score_df['Status'] == '✅ Achieved'])
+opportunities_count = len(score_df[score_df['Status'] == '🎯 Opportunity'])
+high_potential = len(score_df[(score_df['Status'] == '🎯 Opportunity') & (score_df['Score'] >= 60)])
+s_col1.metric("✅ Achieved (Top 12)", achieved)
+s_col2.metric("🎯 Opportunities", opportunities_count)
+s_col3.metric("🔥 High Potential (60+)", high_potential)
+s_col4.metric("📊 Avg Score", f"{score_df['Score'].mean():.0f}")
+
+# Table
+st.dataframe(
+    score_filtered,
+    column_config={
+        "Tag": st.column_config.TextColumn("Tag", width="medium"),
+        "Position": st.column_config.NumberColumn("Pos", width="small"),
+        "Score": st.column_config.ProgressColumn("Score", min_value=0, max_value=100, format="%.0f", width="small"),
+        "Pos (25%)": st.column_config.NumberColumn("📍 Pos", help="Позиція: 0=вже в top 12, 90=майже в цілі #13-15", width="small"),
+        "Popular (20%)": st.column_config.NumberColumn("📈 Pop", help="Популярність: 100=повна сторінка шотів", width="small"),
+        "Commercial (25%)": st.column_config.NumberColumn("💰 Comm", help="Комерційна цінність: 100=клієнти шукають це", width="small"),
+        "Google (15%)": st.column_config.NumberColumn("🔍 SEO", help="Видимість в Google: 100=тег індексується", width="small"),
+        "Relevant (15%)": st.column_config.NumberColumn("🎯 Rel", help="Релевантність послугам VALMAX", width="small"),
+        "Shot": st.column_config.TextColumn("Best Shot", width="large"),
+        "Views": st.column_config.NumberColumn("Views", format="%d", width="small"),
+        "Status": st.column_config.TextColumn("Status", width="small"),
+    },
+    use_container_width=True, hide_index=True,
+    height=500
+)
+
+st.caption("""
+**Як читати Score:**
+- **📍 Pos (25%)** — 0 = вже досягнуто (top 12), 90 = майже в цілі (#13-15), 50 = на відстані (#16-25)
+- **📈 Pop (20%)** — популярність тегу: більше шотів = більше трафіку
+- **💰 Comm (25%)** — комерційна цінність: dashboard, saas, fintech = 100; skiing, sports = 10
+- **🔍 SEO (15%)** — чи індексується tag page в Google (популярні теги = так)
+- **🎯 Rel (15%)** — відповідність послугам VALMAX (UI/UX, web design, dashboards, SaaS, B2B)
+""")
+
+# --- TOP OPPORTUNITIES CHART ---
+top_opps = score_filtered[score_filtered['Status'] == '🎯 Opportunity'].head(15)
+if len(top_opps) > 0:
+    top_opps_sorted = top_opps.sort_values('Score', ascending=True)
+    fig = go.Figure(go.Bar(
+        x=top_opps_sorted['Score'], y=top_opps_sorted['Tag'], orientation='h',
+        marker_color=['#f5576c' if s >= 70 else '#ffa726' if s >= 50 else '#667eea' for s in top_opps_sorted['Score']],
+        text=[f"#{p} → Score {s}" for p, s in zip(top_opps_sorted['Position'], top_opps_sorted['Score'])],
+        textposition='outside'
+    ))
+    fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
+                     plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"),
+                     height=max(350, len(top_opps)*28), xaxis_title="Perspectiveness Score",
+                     title="🔥 Top Opportunities", margin=dict(r=120))
+    st.plotly_chart(fig, use_container_width=True)
 
 # --- FOOTER ---
 st.divider()
