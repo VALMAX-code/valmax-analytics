@@ -231,26 +231,33 @@ if tag_input:
             valmax_pos = int(tag_match.iloc[0].get('Position', 0))
             tag_competition = int(tag_match.iloc[0].get('Total on Page', 0))
     
-    # Live competition check — use DataForSEO SERP to check Dribbble tag page
+    # Live competition check — count total shots via Dribbble tag page API
     if tag_competition == 0:
         import requests as req2
         try:
-            tag_url = f"https://dribbble.com/tags/{tag_hyphen}"
-            resp_tag = req2.get(tag_url, timeout=10, headers={
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml',
-                'Accept-Language': 'en-US,en;q=0.9',
-            })
-            if resp_tag.status_code == 200:
-                import re
-                shot_ids = list(dict.fromkeys(re.findall(r'/shots/(\d+)', resp_tag.text)))
-                if shot_ids:
-                    tag_competition = len(shot_ids)
+            # Dribbble tag pages load more via ?page=N, check first 4 pages (96 shots)
+            total_ids = set()
+            for pg in range(1, 5):
+                tag_url = f"https://dribbble.com/tags/{tag_hyphen}?page={pg}"
+                resp_tag = req2.get(tag_url, timeout=10, headers={
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                })
+                if resp_tag.status_code == 200:
+                    import re
+                    page_ids = set(re.findall(r'/shots/(\d+)', resp_tag.text))
+                    if not page_ids:
+                        break
+                    total_ids.update(page_ids)
+                else:
+                    break
+            if total_ids:
+                tag_competition = len(total_ids)
         except:
             pass
-    # Default to 24 (full page) if tag exists on Dribbble but we couldn't count
     if tag_competition == 0 and dribbble_gpos and dribbble_gpos > 0:
-        tag_competition = 24  # assume full page
+        tag_competition = 24
     
     # --- KPIs ---
     if live_serp:
