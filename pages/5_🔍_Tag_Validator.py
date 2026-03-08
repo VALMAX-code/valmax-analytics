@@ -386,11 +386,10 @@ if tag_input:
             "language_code": "en",
             "location_code": 2840,
             "limit": 50,
-            "include_seed_keyword": False,
-            "filters": ["keyword_info.search_volume", ">", 10]
+            "include_seed_keyword": False
         }]
         rel_resp = req_rel.post(
-            "https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_suggestions/live",
+            "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
             json=rel_payload,
             headers={"Authorization": "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll"},
             timeout=20
