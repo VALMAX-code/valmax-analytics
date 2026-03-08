@@ -400,9 +400,9 @@ if 'Теги' in df.columns:
     
     tags_df = pd.DataFrame([
         {'Tag': tag, 'Shots': d['count'], 
-         'Всего просмотров': d['total_views'],
+         'Total Views': d['total_views'],
          'Avg Views/Shot': round(d['total_views'] / d['count']) if d['count'] > 0 else 0,
-         'Всего лайков': d['total_likes'],
+         'Total Likes': d['total_likes'],
          'Avg Likes/Shot': round(d['total_likes'] / d['count']) if d['count'] > 0 else 0}
         for tag, d in tag_stats.items()
     ])
@@ -443,6 +443,33 @@ if 'Теги' in df.columns:
     tags_display = tags_display.sort_values('Shots', ascending=False).reset_index(drop=True)
     tags_display.index = tags_display.index + 1
     st.dataframe(tags_display, use_container_width=True, height=400)
+    
+    # Shots by tag
+    st.markdown("**🔎 Shots by tag**")
+    all_tag_names = sorted(tags_df['Tag'].tolist(), key=lambda t: tags_df[tags_df['Tag']==t]['Shots'].values[0], reverse=True)
+    selected_tag = st.selectbox("Select tag", all_tag_names, key="shots_by_tag")
+    
+    if selected_tag:
+        tag_shots = df[df['Теги'].str.contains(selected_tag, case=False, na=False)].copy()
+        tag_shots = tag_shots.sort_values('Просмотры', ascending=False).reset_index(drop=True)
+        tag_shots.index = tag_shots.index + 1
+        
+        st.caption(f"{len(tag_shots)} shots with tag **{selected_tag}**")
+        
+        # Build HTML table with clickable names
+        rows_html = ""
+        for i, row in tag_shots.iterrows():
+            link = row.get('Ссылка Dribbble', '')
+            name = row.get('Название', '')
+            name_cell = f'<a href="{link}" target="_blank">{name}</a>' if link else name
+            rows_html += f"<tr><td>{i}</td><td>{name_cell}</td><td>{row.get('Просмотры', 0):,}</td><td>{row.get('Лайки', 0):,}</td><td>{row.get('Сохранения', 0):,}</td><td>{row.get('Дата', '')}</td></tr>"
+        
+        html = f"""<table style="width:100%; border-collapse:collapse; font-size:14px;">
+        <thead><tr style="border-bottom:2px solid #e8ecf1; text-align:left;">
+            <th style="padding:8px">#</th><th style="padding:8px">Name</th><th style="padding:8px">Views</th>
+            <th style="padding:8px">Likes</th><th style="padding:8px">Saves</th><th style="padding:8px">Date</th>
+        </tr></thead><tbody>{rows_html}</tbody></table>"""
+        st.markdown(html, unsafe_allow_html=True)
 
 # --- PROJECT TYPES ---
 st.divider()
