@@ -10,6 +10,9 @@ from google.oauth2.service_account import Credentials
 st.markdown("""
 <style>
     .stApp { background-color: #f5f7fb; }
+    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); }
+    section[data-testid="stSidebar"] * { color: #fff !important; }
+    section[data-testid="stSidebar"] a { color: #e0d4ff !important; }
     [data-testid="stMetric"] { 
         background: #ffffff; padding: 18px; border-radius: 14px; 
         box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: none;
