@@ -218,8 +218,11 @@ if tag_input:
                 ai_vis = 'No'
             
             live_serp = True
-        except:
-            pass
+        except Exception as serp_err:
+            serp_error = str(serp_err)
+    
+    if not live_serp and dribbble_gpos is None:
+        st.warning("⚠️ Live SERP недоступний (баланс DataForSEO вичерпано). Поповніть на app.dataforseo.com/billing")
     
     # VALMAX position in tag
     valmax_pos = None
