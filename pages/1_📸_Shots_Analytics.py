@@ -110,9 +110,8 @@ df, profile, monthly = load_data()
 
 # --- HEADER ---
 st.markdown("# 📸 VALMAX Shots Analytics")
-import datetime as _dt
-_now = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=1)))
-st.caption(f"🕐 Останнє оновлення даних: {_now.strftime('%d %B %Y, %H:%M')} CET")
+from utils import show_last_updated
+show_last_updated("Shots Analytics")
 st.markdown("Аналітика по шотам на Dribbble")
 
 # --- PROFILE STATS ---
