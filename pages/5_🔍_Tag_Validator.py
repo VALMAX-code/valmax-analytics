@@ -143,9 +143,14 @@ if tag_input:
     if cpc > 100:
         cpc = cpc / 100
     
-    # Dribbble Google position
+    # Dribbble Google position — try cached first, then live SERP
     dribbble_gpos = None
     est_traffic = 0
+    ai_vis = 'Unknown'
+    live_serp = False
+    ctr_map = {1:0.28, 2:0.15, 3:0.11, 4:0.08, 5:0.07, 6:0.05, 7:0.04, 8:0.03, 9:0.03, 10:0.02,
+               11:0.015, 12:0.012, 13:0.01, 14:0.009, 15:0.008, 16:0.007, 17:0.006, 18:0.005, 19:0.005, 20:0.005}
+    
     if not kw_match.empty:
         dribbble_gpos = int(kw_match.iloc[0].get('Google Pos', 0) or 0)
         est_traffic = int(kw_match.iloc[0].get('Est. Traffic/mo', 0) or 0)
@@ -153,11 +158,45 @@ if tag_input:
         gp = serp.get('Dribbble Google Pos', 0)
         if gp and gp != '':
             dribbble_gpos = int(gp)
-            ctr_map = {1:0.28, 2:0.15, 3:0.11, 4:0.08, 5:0.07, 6:0.05, 7:0.04, 8:0.03, 9:0.03, 10:0.02}
             est_traffic = int(volume * ctr_map.get(dribbble_gpos, 0.01))
     
-    # AI visibility
-    ai_vis = serp.get('AI Overview', 'Unknown')
+    if serp:
+        ai_vis = serp.get('AI Overview', 'Unknown')
+    
+    # Live SERP check via DataForSEO if no cached data
+    if dribbble_gpos is None or dribbble_gpos == 0 or ai_vis == 'Unknown':
+        import requests
+        try:
+            serp_payload = [{"keyword": tag_space, "language_code": "en", "location_code": 2840, "depth": 20}]
+            resp = requests.post(
+                "https://api.dataforseo.com/v3/serp/google/organic/live/regular",
+                json=serp_payload,
+                headers={"Authorization": st.secrets.get("DATAFORSEO_AUTH", "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll")},
+                timeout=15
+            )
+            serp_result = resp.json()
+            items = serp_result.get('tasks', [{}])[0].get('result', [{}])[0].get('items', [])
+            
+            for item in items:
+                url = item.get('url', '')
+                if 'dribbble.com' in url:
+                    dribbble_gpos = item.get('rank_absolute', 0)
+                    est_traffic = int(volume * ctr_map.get(dribbble_gpos, 0.005))
+                    break
+            
+            # Check AI overview
+            ai_items = [i for i in items if i.get('type') == 'ai_overview']
+            if ai_items:
+                ai_vis = 'Yes'
+                ai_text = str(ai_items[0])
+                if 'dribbble' in ai_text.lower():
+                    ai_vis = 'Yes (Dribbble mentioned)'
+            else:
+                ai_vis = 'No'
+            
+            live_serp = True
+        except:
+            pass
     
     # VALMAX position in tag
     valmax_pos = None
@@ -170,11 +209,15 @@ if tag_input:
             tag_competition = int(tag_match.iloc[0].get('Total on Page', 0))
     
     # --- KPIs ---
+    if live_serp:
+        st.caption("🔴 **LIVE** — дані отримані з Google в реальному часі через DataForSEO ($0.002)")
+    
     k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("🔍 Google Volume", f"{volume:,}/mo" if volume else "No data")
     k2.metric("🌐 Dribbble in Google", f"#{dribbble_gpos}" if dribbble_gpos else "Not in top 20")
     k3.metric("🚀 Est. Traffic to Dribbble", f"{est_traffic:,}/mo" if est_traffic else "0")
-    k4.metric("🤖 AI Visibility", "✅ Yes" if ai_vis == 'Yes' else "❌ No")
+    ai_label = "✅ Yes" if 'Yes' in str(ai_vis) else "❌ No"
+    k4.metric("🤖 AI Visibility", ai_label)
     k5.metric("📍 VALMAX Position", f"#{valmax_pos}" if valmax_pos else "Not ranked")
     
     k6, k7, k8 = st.columns(3)
