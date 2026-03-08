@@ -401,7 +401,44 @@ if tag_input:
         else:
             st.info("Схожих тегів не знайдено")
     else:
-        st.info("Немає даних для рекомендацій")
+        st.info("Немає даних в кешованій базі")
+        if st.button("🔍 Знайти схожі теги через API", key="fetch_related"):
+            import requests as req_rel
+            with st.spinner("Шукаю схожі keywords через DataForSEO..."):
+                try:
+                    rel_payload = [{
+                        "keyword": tag_space,
+                        "language_code": "en",
+                        "location_code": 2840,
+                        "limit": 30,
+                        "filters": ["keyword_data.keyword_info.search_volume", ">", 10]
+                    }]
+                    rel_resp = req_rel.post(
+                        "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
+                        json=rel_payload,
+                        headers={"Authorization": "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll"},
+                        timeout=20
+                    )
+                    rel_result = rel_resp.json()
+                    rel_items = rel_result.get('tasks', [{}])[0].get('result', [{}])[0].get('items', [])
+                    
+                    if rel_items:
+                        rel_rows = []
+                        for ri in rel_items:
+                            kd = ri.get('keyword_data', {})
+                            ki = kd.get('keyword_info', {})
+                            rel_rows.append({
+                                'Keyword': kd.get('keyword', ''),
+                                'Volume/mo': ki.get('search_volume', 0) or 0,
+                                'CPC ($)': f"${ki.get('cpc', 0) or 0:.2f}",
+                            })
+                        rel_df = pd.DataFrame(rel_rows).sort_values('Volume/mo', ascending=False)
+                        st.dataframe(rel_df, use_container_width=True, hide_index=True)
+                        st.caption("💰 Live дані з DataForSEO Related Keywords API (~$0.01)")
+                    else:
+                        st.warning("API не знайшов схожих keywords")
+                except Exception as e:
+                    st.error(f"Помилка API: {e}")
 
 # --- FULL KEYWORDS TABLE ---
 st.divider()
