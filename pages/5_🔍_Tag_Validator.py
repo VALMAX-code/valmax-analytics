@@ -385,11 +385,12 @@ if tag_input:
             "keyword": tag_space,
             "language_code": "en",
             "location_code": 2840,
-            "limit": 30,
-            "filters": ["keyword_data.keyword_info.search_volume", ">", 10]
+            "limit": 50,
+            "include_seed_keyword": False,
+            "filters": ["keyword_info.search_volume", ">", 10]
         }]
         rel_resp = req_rel.post(
-            "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
+            "https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_suggestions/live",
             json=rel_payload,
             headers={"Authorization": "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll"},
             timeout=20
@@ -400,15 +401,17 @@ if tag_input:
         if rel_items:
             rel_rows = []
             for ri in rel_items:
-                kd = ri.get('keyword_data', {})
-                ki = kd.get('keyword_info', {})
-                kw_name = kd.get('keyword', '')
+                # keyword_suggestions format
+                kw_name = ri.get('keyword', '') or ri.get('keyword_data', {}).get('keyword', '')
+                ki = ri.get('keyword_info', {}) or ri.get('keyword_data', {}).get('keyword_info', {})
+                if not kw_name:
+                    continue
                 if kw_name.lower() in (tag, tag_hyphen, tag_space):
                     continue
                 vol_r = ki.get('search_volume', 0) or 0
                 cpc_r = ki.get('cpc', 0) or 0
                 rel_rows.append({
-                    'Keyword': kw_name,
+                    '📋 Tag': kw_name,
                     'Volume/mo': vol_r,
                     'CPC ($)': f"${cpc_r:.2f}",
                     'Competition': ki.get('competition_level', ''),
@@ -418,13 +421,16 @@ if tag_input:
                 st.dataframe(
                     rel_df,
                     column_config={
-                        "Keyword": st.column_config.TextColumn("🏷️ Keyword", width="large"),
+                        "📋 Tag": st.column_config.TextColumn("📋 Tag (click to copy)", width="large"),
                         "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", format="%d"),
                         "CPC ($)": st.column_config.TextColumn("💰 CPC"),
                         "Competition": st.column_config.TextColumn("⚔️ Competition"),
                     },
                     use_container_width=True, hide_index=True
                 )
+                # Copyable tag list
+                all_tags = ", ".join(rel_df['📋 Tag'].tolist())
+                st.text_area("📋 Копіювати всі теги:", all_tags, height=80)
             else:
                 st.info("Немає схожих keywords")
         else:
