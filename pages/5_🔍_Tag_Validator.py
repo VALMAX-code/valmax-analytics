@@ -459,19 +459,44 @@ if not kw_df.empty:
     if kw_search:
         display_kw = display_kw[display_kw['Keyword'].str.contains(kw_search, case=False, na=False)]
     
-    st.dataframe(
-        display_kw.head(500),
-        column_config={
-            "Keyword": st.column_config.TextColumn("🏷️ Keyword", width="large"),
-            "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", format="%d"),
-            "CPC ($)": st.column_config.TextColumn("💰 CPC"),
-            "Google Pos": st.column_config.NumberColumn("🔍 Pos", format="%d"),
-            "Est. Traffic/mo": st.column_config.NumberColumn("🚀 Traffic", format="%d"),
-            "Tag Page": st.column_config.TextColumn("Tag Page"),
-            "Landing URL": st.column_config.LinkColumn("🔗", display_text="Open →"),
-        },
-        use_container_width=True, hide_index=True, height=600
-    )
+    # Build HTML table with copy buttons
+    display_rows = display_kw.head(500)
+    html_table = """
+    <style>
+    .kw-table { width:100%; border-collapse:collapse; font-family:sans-serif; font-size:14px; }
+    .kw-table th { background:#667eea; color:white; padding:8px 12px; text-align:left; position:sticky; top:0; }
+    .kw-table td { padding:6px 12px; border-bottom:1px solid #eee; }
+    .kw-table tr:hover { background:#f0f2ff; }
+    .copy-btn { background:none; border:1px solid #ddd; border-radius:4px; cursor:pointer; padding:2px 6px; font-size:12px; }
+    .copy-btn:hover { background:#667eea; color:white; border-color:#667eea; }
+    .copy-btn:active { background:#43e97b; border-color:#43e97b; }
+    </style>
+    <script>
+    function copyTag(text, btn) {
+        navigator.clipboard.writeText(text);
+        btn.textContent = '✅';
+        setTimeout(() => btn.textContent = '📋', 1000);
+    }
+    </script>
+    <div style="max-height:600px; overflow-y:auto;">
+    <table class="kw-table">
+    <tr><th>📋</th><th>🏷️ Keyword</th><th>📈 Vol/mo</th><th>💰 CPC</th><th>🔍 Pos</th><th>🚀 Traffic</th><th>Tag</th></tr>
+    """
+    for _, row in display_rows.iterrows():
+        kw_val = str(row.get('Keyword', ''))
+        vol = int(row.get('Volume/mo', 0) or 0)
+        cpc_val = row.get('CPC ($)', '$0.00')
+        pos = int(row.get('Google Pos', 0) or 0)
+        traf = int(row.get('Est. Traffic/mo', 0) or 0)
+        tag_p = str(row.get('Tag Page', ''))
+        kw_escaped = kw_val.replace("'", "\\'")
+        html_table += f"""<tr>
+            <td><button class="copy-btn" onclick="copyTag('{kw_escaped}', this)">📋</button></td>
+            <td>{kw_val}</td><td>{vol:,}</td><td>{cpc_val}</td><td>#{pos}</td><td>{traf:,}</td><td>{tag_p}</td>
+        </tr>"""
+    html_table += "</table></div>"
+    
+    st.components.v1.html(html_table, height=620, scrolling=True)
     
     st.caption("""
     **Як користуватися:**
