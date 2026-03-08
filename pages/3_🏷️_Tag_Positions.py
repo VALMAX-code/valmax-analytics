@@ -90,13 +90,34 @@ num_top3 = len(df[df['Position'] <= 3])
 num_top5 = len(df[df['Position'] <= 5])
 num_top10 = len(df[df['Position'] <= 10])
 
-c1, c2, c3, c4, c5, c6 = st.columns(6)
-c1.metric("🏷️ Total Unique Tags", 1272)
-c2.metric("✅ Tags with VALMAX", total_tags_with_positions)
-c3.metric("📍 Total Positions", total_positions)
-c4.metric("🥇 #1 Positions", num_first)
-c5.metric("🥉 Top 5", num_top5)
-c6.metric("🔟 Top 10", num_top10)
+num_top20 = len(df[df['Position'] <= 20])
+num_top30 = len(df[df['Position'] <= 30])
+num_top40 = len(df[df['Position'] <= 40])
+num_top50 = len(df[df['Position'] <= 50])
+num_top100 = len(df[df['Position'] <= 100])
+num_over100 = len(df[df['Position'] > 100])
+
+row1 = st.columns(6)
+row1[0].metric("🏷️ Total Unique Tags", 1272)
+row1[1].metric("✅ Tags with VALMAX", total_tags_with_positions)
+row1[2].metric("📍 Total Positions", total_positions)
+row1[3].metric("🥇 #1", num_first)
+row1[4].metric("🥉 Top 5", num_top5)
+row1[5].metric("🔟 Top 10", num_top10)
+
+row2 = st.columns(6)
+row2[0].metric("🏅 Top 20", num_top20)
+row2[1].metric("📊 Top 30", num_top30)
+row2[2].metric("📈 Top 40", num_top40)
+row2[3].metric("🎯 Top 50", num_top50)
+row2[4].metric("💯 Top 100", num_top100)
+row2[5].metric("📭 100+", num_over100)
+
+st.caption("""
+**🏷️ Total Unique Tags** — all unique tags used across 210 VALMAX shots on Dribbble  ·  
+**✅ Tags with VALMAX** — tags where at least one VALMAX shot appears in the search results (top 25 scanned, deep scan top 100 in progress)  ·  
+**📍 Total Positions** — total number of shot×tag appearances found (one shot can appear in multiple tags)
+""")
 
 # --- FILTERS ---
 st.divider()
