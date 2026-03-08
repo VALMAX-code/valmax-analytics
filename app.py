@@ -10,8 +10,8 @@ st.set_page_config(page_title="VALMAX Analytics", page_icon="📊", layout="wide
 
 # --- Multi-page nav ---
 st.sidebar.markdown("## 🧭 Навигация")
-st.sidebar.page_link("app.py", label="📋 Leads Analytics", icon="📋")
-st.sidebar.page_link("pages/shots.py", label="📸 Shots Analytics", icon="📸")
+st.sidebar.page_link("app.py", label="📋 Leads Analytics")
+st.sidebar.page_link("pages/shots.py", label="📸 Shots Analytics")
 st.sidebar.divider()
 
 # --- STYLES ---
