@@ -393,7 +393,7 @@ with eng_col2:
 
 # --- TAGS ANALYSIS ---
 st.divider()
-st.markdown("### 🏷️ Топ теги")
+st.markdown("### 🏷️ Top tags")
 
 if 'Теги' in df.columns:
     # Collect all tags with their shot metrics
@@ -411,7 +411,7 @@ if 'Теги' in df.columns:
             tag_stats[tag]['total_likes'] += row.get('Лайки', 0)
     
     tags_df = pd.DataFrame([
-        {'Тег': tag, 'Шотов': d['count'], 
+        {'Tag': tag, 'Shots': d['count'], 
          'Всего просмотров': d['total_views'],
          'Avg Views/Shot': round(d['total_views'] / d['count']) if d['count'] > 0 else 0,
          'Всего лайков': d['total_likes'],
@@ -423,8 +423,8 @@ if 'Теги' in df.columns:
     
     with tag_col1:
         st.markdown("**Самые используемые теги**")
-        top_used = tags_df.nlargest(15, 'Шотов')
-        fig = px.bar(top_used, x='Шотов', y='Тег', orientation='h', template="plotly_white",
+        top_used = tags_df.nlargest(15, 'Shots')
+        fig = px.bar(top_used, x='Shots', y='Tag', orientation='h', template="plotly_white",
                      color_discrete_sequence=['#667eea'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=450, yaxis=dict(autorange="reversed"))
@@ -432,8 +432,8 @@ if 'Теги' in df.columns:
     
     with tag_col2:
         st.markdown("**Теги с лучшим Avg Views/Shot** (мин. 3 шота)")
-        best_tags = tags_df[tags_df['Шотов'] >= 3].nlargest(15, 'Avg Views/Shot')
-        fig = px.bar(best_tags, x='Avg Views/Shot', y='Тег', orientation='h', template="plotly_white",
+        best_tags = tags_df[tags_df['Shots'] >= 3].nlargest(15, 'Avg Views/Shot')
+        fig = px.bar(best_tags, x='Avg Views/Shot', y='Tag', orientation='h', template="plotly_white",
                      color_discrete_sequence=['#43e97b'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=450, yaxis=dict(autorange="reversed"))
@@ -441,7 +441,7 @@ if 'Теги' in df.columns:
 
 # --- PROJECT TYPES ---
 st.divider()
-st.markdown("### 🎨 Типи проєктів")
+st.markdown("### 🎨 Project types")
 
 def classify_shot(name):
     name = str(name).lower()
@@ -465,8 +465,8 @@ if 'Название' in df.columns:
     
     with type_col1:
         type_counts = df['Тип проекта'].value_counts().reset_index()
-        type_counts.columns = ['Тип', 'Кол-во']
-        fig = px.pie(type_counts, names='Тип', values='Кол-во', template="plotly_white",
+        type_counts.columns = ['Type', 'Count']
+        fig = px.pie(type_counts, names='Type', values='Count', template="plotly_white",
                      color_discrete_sequence=px.colors.qualitative.Set2)
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
@@ -476,7 +476,7 @@ if 'Название' in df.columns:
             'Просмотры': 'mean', 'Лайки': 'mean', 'Engagement': 'mean'
         }).round(0).reset_index()
         type_perf.columns = ['Тип', 'Avg Views', 'Avg Likes', 'Avg Engagement']
-        fig = px.bar(type_perf, x='Тип', y='Avg Views', template="plotly_white",
+        fig = px.bar(type_perf, x='Type', y='Avg Views', template="plotly_white",
                      color='Avg Engagement', color_continuous_scale=['#f5576c', '#00d4aa'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=350)
