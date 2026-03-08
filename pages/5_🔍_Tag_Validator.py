@@ -582,6 +582,15 @@ if not kw_df.empty:
     if kw_search:
         display_kw = display_kw[display_kw['Keyword'].str.contains(kw_search, case=False, na=False)]
     
+    # Build tag competition lookup from Tag Positions data
+    tag_shots_lookup = {}
+    if not tag_pos_df.empty and 'Tag' in tag_pos_df.columns and 'Total on Page' in tag_pos_df.columns:
+        for _, tpr in tag_pos_df.iterrows():
+            tag_name = str(tpr.get('Tag', '')).lower().replace(' ', '-')
+            shots_count = int(tpr.get('Total on Page', 0) or 0)
+            if tag_name and shots_count > 0:
+                tag_shots_lookup[tag_name] = shots_count
+    
     # Build HTML table with copy buttons
     display_rows = display_kw.head(500)
     html_table = """
@@ -603,7 +612,7 @@ if not kw_df.empty:
     </script>
     <div style="max-height:600px; overflow-y:auto;">
     <table class="kw-table">
-    <tr><th>📋</th><th>🏷️ Keyword</th><th>📈 Vol/mo</th><th>💰 CPC</th><th>🔍 Pos</th><th>🚀 Traffic</th><th>Tag</th></tr>
+    <tr><th>📋</th><th>🏷️ Keyword</th><th>📈 Vol/mo</th><th>💰 CPC</th><th>🔍 Pos</th><th>🚀 Traffic</th><th>🎯 Dribbble</th><th>Tag</th></tr>
     """
     for _, row in display_rows.iterrows():
         kw_val = str(row.get('Keyword', ''))
@@ -613,9 +622,16 @@ if not kw_df.empty:
         traf = int(row.get('Est. Traffic/mo', 0) or 0)
         tag_p = str(row.get('Tag Page', ''))
         kw_escaped = kw_val.replace("'", "\\'")
+        # Dribbble competition from cached tag positions
+        dr_shots = tag_shots_lookup.get(tag_p.lower(), None)
+        if dr_shots is not None:
+            dr_color = '#43e97b' if dr_shots < 15 else ('#ffa726' if dr_shots < 24 else '#f5576c')
+            dr_cell = f'<span style="color:{dr_color};font-weight:bold">{dr_shots}</span>'
+        else:
+            dr_cell = '<span style="color:#ccc">—</span>'
         html_table += f"""<tr>
             <td><button class="copy-btn" onclick="copyTag('{kw_escaped}', this)">📋</button></td>
-            <td>{kw_val}</td><td>{vol:,}</td><td>{cpc_val}</td><td>#{pos}</td><td>{traf:,}</td><td>{tag_p}</td>
+            <td>{kw_val}</td><td>{vol:,}</td><td>{cpc_val}</td><td>#{pos}</td><td>{traf:,}</td><td>{dr_cell}</td><td>{tag_p}</td>
         </tr>"""
     html_table += "</table></div>"
     
