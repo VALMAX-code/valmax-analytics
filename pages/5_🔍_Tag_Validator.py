@@ -557,6 +557,13 @@ if tag_input:
                         
                         all_theme_tags = ", ".join([t['tag_page'] for t in sorted_themes])
                         st.text_area("📋 Копіювати всі теги тематик:", all_theme_tags, height=60)
+                        st.caption("""
+                        **🏷️ Dribbble Tag** — реальна tag page на Dribbble (можна використовувати як тег для шоту) · 
+                        **🔑 Top Keyword** — найпопулярніший пошуковий запит Google, який веде на цю tag page · 
+                        **📈 Vol** — пошукові запити цього keyword в Google на місяць · 
+                        **🚀 Traffic** — приблизна кількість кліків з Google на цю Dribbble tag page · 
+                        **🔍 Pos** — позиція цієї Dribbble tag page в Google (менше = краще)
+                        """)
                     else:
                         st.info("Не знайдено схожих тематик в базі")
                 else:
