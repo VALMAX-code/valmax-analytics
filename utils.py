@@ -19,13 +19,31 @@ def load_meta():
     except:
         return {}
 
+CRON_SCHEDULE = {
+    "Leads (Project Requests)": "Щогодини (hourly cron)",
+    "Leads (Project Intros)": "Щогодини (hourly cron)",
+    "Shots Analytics": "Щопонеділка, 8:00 CET",
+    "Tag Positions": "Manual / weekly",
+    "SEO Data (Volume/CPC)": "Manual / monthly",
+    "SERP Data (Google Pos)": "Manual / monthly",
+    "Competitors": "Щоденно, 9:00 CET",
+    "Popular Tracker": "Щоденно, 12:00 CET",
+}
+
 def show_last_updated(dataset_name):
-    """Display last updated caption for a specific dataset."""
+    """Display last updated + next update caption."""
     meta = load_meta()
     ts = meta.get(dataset_name, None)
+    next_update = CRON_SCHEDULE.get(dataset_name, "")
+    
     if ts:
-        st.caption(f"🕐 Останнє оновлення даних: {ts} CET")
+        line = f"🕐 Останнє оновлення: {ts} CET"
     else:
         import datetime as _dt
         _now = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=1)))
-        st.caption(f"🕐 Останнє оновлення даних: {_now.strftime('%d %B %Y, %H:%M')} CET")
+        line = f"🕐 Останнє оновлення: {_now.strftime('%d %B %Y, %H:%M')} CET"
+    
+    if next_update:
+        line += f"  ·  🔄 Наступне: {next_update}"
+    
+    st.caption(line)
