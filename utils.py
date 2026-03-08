@@ -23,9 +23,9 @@ CRON_SCHEDULE = {
     "Leads (Project Requests)": "Щогодини (hourly cron)",
     "Leads (Project Intros)": "Щогодини (hourly cron)",
     "Shots Analytics": "Щопонеділка, 8:00 CET",
-    "Tag Positions": "Manual / weekly",
-    "SEO Data (Volume/CPC)": "Manual / monthly",
-    "SERP Data (Google Pos)": "Manual / monthly",
+    "Tag Positions": "Щотижня (weekly cron)",
+    "SEO Data (Volume/CPC)": "Щомісяця (monthly cron)",
+    "SERP Data (Google Pos)": "Щомісяця (monthly cron)",
     "Competitors": "Щоденно, 9:00 CET",
     "Popular Tracker": "Щоденно, 12:00 CET",
 }
