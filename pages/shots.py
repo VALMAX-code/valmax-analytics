@@ -38,8 +38,14 @@ def load_data():
     sh = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
     
     ws = sh.worksheet("📊 Shots Analytics")
-    data = ws.get_all_records()
-    df = pd.DataFrame(data)
+    # Read only shot data columns A-K (skip profile stats in M-R)
+    all_vals = ws.get('A1:K250')
+    if len(all_vals) < 2:
+        return pd.DataFrame(), {}, {}
+    headers = all_vals[0]
+    rows = [r + [''] * (len(headers) - len(r)) for r in all_vals[1:] if any(r)]
+    df = pd.DataFrame(rows, columns=headers)
+    df = df[df['Название'].astype(str).str.strip() != '']
     
     # Parse numeric columns
     for col in ['Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Кол-во тегов']:
