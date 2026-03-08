@@ -222,6 +222,8 @@ if len(first_places) > 0:
 else:
     st.info("No #1 positions in current filter")
 
+st.caption("**Competitors** — кількість шотів у видачі тегу. Макс. 25 = ліміт першої сторінки Dribbble (deep scan до 100 в процесі). 2 = низька конкуренція, легше утримувати #1")
+
 # --- BEST SHOTS BY TAG COUNT ---
 st.divider()
 st.markdown("### 🎯 Best Performing Shots (by tag appearances)")
@@ -251,6 +253,8 @@ st.dataframe(
     use_container_width=True, hide_index=True
 )
 
+st.caption("**Tags Found** — в скількох тегах шот знайдений · **Avg Position** — середня позиція · **Best** — найкраща · **#1 Count** — скільки разів на 1 місці · **Top 5** — скільки разів в топ-5")
+
 # --- SCATTER: VIEWS vs POSITION ---
 st.divider()
 st.markdown("### 📈 Views vs Tag Position")
@@ -268,6 +272,8 @@ fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                  showlegend=False)
 fig.update_xaxes(autorange="reversed")
 st.plotly_chart(fig, use_container_width=True)
+
+st.caption("Кожна точка = один шот в одному тегу. Чим лівіше (ближче до #1) і вище (більше views) — тим краще. Якщо шот з високими views далеко від #1, є потенціал для покращення позиції")
 
 # --- TAG CATEGORIES ---
 st.divider()
@@ -318,6 +324,8 @@ if cat_data:
     with col_c2:
         st.dataframe(cat_df, use_container_width=True, hide_index=True)
 
+st.caption("Автоматична категоризація тегів. Колір = середня позиція (зелений = краще, червоний = гірше). Показує в яких нішах VALMAX найсильніший")
+
 # --- ALL POSITIONS TABLE ---
 st.divider()
 st.markdown("### 📋 All Tag Positions")
@@ -353,7 +361,7 @@ st.dataframe(
 # --- OPPORTUNITY TAGS ---
 st.divider()
 st.markdown("### 💡 Opportunity Tags")
-st.caption("Tags where VALMAX is close to #1 — small improvements could boost ranking")
+st.caption("Теги де VALMAX близько до #1 — невеликі покращення (більше лайків/saves) можуть підняти позицію. Gap to #1 = скільки позицій до першого місця")
 
 opportunities = filtered[(filtered['Position'] > 1) & (filtered['Position'] <= 5)].sort_values('Position')
 if len(opportunities) > 0:
