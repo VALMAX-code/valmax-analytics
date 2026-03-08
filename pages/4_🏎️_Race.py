@@ -257,6 +257,75 @@ if valmax_row is not None:
 
 st.divider()
 
+# --- POPULAR LEADERBOARD ---
+st.markdown("### ⭐ Popular Leaderboard — хто в Popular цього тижня?")
+st.caption("Конкуренти в Dribbble Popular (Weekly) по категоріях. Хто нас обходить?")
+
+@st.cache_data(ttl=300)
+def load_popular_competitors():
+    try:
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds_pc = Credentials.from_service_account_info(creds_dict, scopes=[
+            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/drive.readonly'
+        ])
+        gc_pc = gspread.authorize(creds_pc)
+        sh_pc = gc_pc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
+        ws_pc = sh_pc.worksheet("⭐ Popular Competitors")
+        return pd.DataFrame(ws_pc.get_all_records())
+    except:
+        return pd.DataFrame()
+
+pop_comp = load_popular_competitors()
+if not pop_comp.empty:
+    # Summary: who appears most across categories
+    summary = pop_comp.groupby('Profile').agg(
+        total_appearances=('Appearances', 'sum'),
+        best_position=('Best Position', 'min'),
+        categories=('Category', 'nunique')
+    ).sort_values('total_appearances', ascending=False).reset_index()
+    
+    # KPIs
+    pc1, pc2, pc3 = st.columns(3)
+    valmax_pop = summary[summary['Profile'] == 'VALMAX']
+    if len(valmax_pop) > 0:
+        pc1.metric("📍 VALMAX Best Popular Pos", f"#{valmax_pop.iloc[0]['best_position']}")
+        pc2.metric("📊 VALMAX Appearances", valmax_pop.iloc[0]['total_appearances'])
+    else:
+        pc1.metric("📍 VALMAX in Popular", "❌ Not found")
+        pc2.metric("📊 Appearances", 0)
+    pc3.metric("🏆 Most Active", f"{summary.iloc[0]['Profile']} ({summary.iloc[0]['total_appearances']}x)")
+    
+    # Summary table
+    def highlight_valmax_pop(row):
+        if row.get('Profile') == 'VALMAX':
+            return ['background-color: #43e97b22'] * len(row)
+        return [''] * len(row)
+    
+    st.dataframe(
+        summary.style.apply(highlight_valmax_pop, axis=1),
+        column_config={
+            "Profile": st.column_config.TextColumn("👤 Profile"),
+            "total_appearances": st.column_config.NumberColumn("📊 Appearances", help="Скільки разів з'являється в Popular (всі категорії)"),
+            "best_position": st.column_config.NumberColumn("🏆 Best Pos", help="Найкраща позиція в Popular серед всіх категорій"),
+            "categories": st.column_config.NumberColumn("📂 Categories", help="В скількох категоріях з'являється"),
+        },
+        use_container_width=True, hide_index=True
+    )
+    
+    # Detail by category
+    with st.expander("📋 Деталі по категоріях"):
+        for cat in pop_comp['Category'].unique():
+            cat_data = pop_comp[pop_comp['Category'] == cat].sort_values('Best Position')
+            st.markdown(f"**{cat}:**")
+            for _, row in cat_data.iterrows():
+                emoji = "🟢" if row['Profile'] == 'VALMAX' else "⚪"
+                st.markdown(f"  {emoji} {row['Profile']} — {row['Positions']} ({row['Appearances']}x)")
+    
+    st.caption("Дані: Dribbble Popular (Weekly timeframe) по 5 категоріях: All, Web Design, Product Design, Mobile, Branding")
+
+st.divider()
+
 # --- RECOMMENDATIONS ---
 st.markdown("### 💡 Recommendations")
 
