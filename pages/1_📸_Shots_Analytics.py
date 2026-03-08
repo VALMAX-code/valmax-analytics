@@ -519,6 +519,56 @@ if 'Название' in df.columns:
                          font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
+# --- SEO VISIBILITY ---
+st.divider()
+st.markdown("### 🔍 SEO Visibility (Google via Brave Search)")
+st.caption("Які шоти VALMAX видно в Google при пошуку дизайн-запитів. Оновлюється щотижня.")
+
+seo_col1, seo_col2 = st.columns(2)
+
+with seo_col1:
+    st.markdown("**✅ VALMAX шоти індексовані в Google (9 шотів):**")
+    indexed_shots = [
+        "AVISION - Design Platform for Creative Professionals",
+        "Sales Analytics Landing Page",
+        "Gaming Tournament Platform",
+        "Prime Planners - UX/UI design",
+        "Struktura — Website for Frame House Builders",
+        "Renovating services | UX/UI design",
+        "AI Tutor - web design of a learning platform",
+        "Intuitive UX/UI Design for a Health Monitoring App",
+        "AVISION - a design platform (v2)",
+    ]
+    for shot in indexed_shots:
+        st.markdown(f"- 🟢 {shot}")
+    
+    st.metric("📊 Indexed Shots", f"9 / 210", delta="4.3%")
+
+with seo_col2:
+    st.markdown("**❌ Комерційні запити — VALMAX НЕ в Google Top 10:**")
+    seo_queries = {
+        "dashboard ui design": ["Outcrowd", "Halo Lab", "Phenomenon"],
+        "saas dashboard design": [],
+        "fintech dashboard ui": ["Nixtio", "QClay"],
+        "healthcare app design": ["Phenomenon", "QClay"],
+        "landing page design": [],
+        "mobile app ui design": [],
+        "crm dashboard design": [],
+        "crypto dashboard ui": [],
+        "analytics dashboard design": [],
+        "b2b saas design": [],
+    }
+    
+    seo_rows = []
+    for query, competitors in seo_queries.items():
+        comp_str = ", ".join(competitors) if competitors else "—"
+        seo_rows.append({"Query": query, "VALMAX": "❌", "Competitors in Top 10": comp_str})
+    
+    seo_df = pd.DataFrame(seo_rows)
+    st.dataframe(seo_df, use_container_width=True, hide_index=True, height=380)
+
+st.caption("💡 **Інсайт:** VALMAX індексується по бренду, але НЕ з'являється по комерційних запитах. Конкуренти (Outcrowd, QClay, Nixtio, Phenomenon) видні по ключових нішах. Це зона росту — потрібно оптимізувати назви шотів та теги під пошукові запити.")
+
 # --- ALL SHOTS TABLE ---
 st.divider()
 st.markdown("### 📋 All shots")
