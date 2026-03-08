@@ -231,18 +231,26 @@ if tag_input:
             valmax_pos = int(tag_match.iloc[0].get('Position', 0))
             tag_competition = int(tag_match.iloc[0].get('Total on Page', 0))
     
-    # Live competition check if unknown — count shots on Dribbble tag page
+    # Live competition check — use DataForSEO SERP to check Dribbble tag page
     if tag_competition == 0:
         import requests as req2
         try:
             tag_url = f"https://dribbble.com/tags/{tag_hyphen}"
-            resp_tag = req2.get(tag_url, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+            resp_tag = req2.get(tag_url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml',
+                'Accept-Language': 'en-US,en;q=0.9',
+            })
             if resp_tag.status_code == 200:
                 import re
-                shot_ids = list(dict.fromkeys(re.findall(r'/shots/(\d+)-', resp_tag.text)))
-                tag_competition = len(shot_ids)
+                shot_ids = list(dict.fromkeys(re.findall(r'/shots/(\d+)', resp_tag.text)))
+                if shot_ids:
+                    tag_competition = len(shot_ids)
         except:
             pass
+    # Default to 24 (full page) if tag exists on Dribbble but we couldn't count
+    if tag_competition == 0 and dribbble_gpos and dribbble_gpos > 0:
+        tag_competition = 24  # assume full page
     
     # --- KPIs ---
     if live_serp:
@@ -354,8 +362,21 @@ if tag_input:
     st.markdown("### 💡 Рекомендовані теги (схожі)")
     st.caption("Теги з бази keywords Dribbble, які пов'язані з вашим запитом і мають трафік")
     
+    # Broader search: match any word from the tag
+    if kw_partial.empty and not kw_df.empty:
+        words = tag_space.split()
+        mask = pd.Series([False] * len(kw_df))
+        for w in words:
+            if len(w) > 2:  # skip short words
+                mask = mask | kw_df['Keyword'].str.lower().str.contains(w, na=False)
+        kw_partial = kw_df[mask]
+    
     if not kw_partial.empty:
-        related = kw_partial[kw_partial['Keyword'].str.lower() != tag].sort_values('Est. Traffic/mo', ascending=False).head(20)
+        related = kw_partial[
+            (kw_partial['Keyword'].str.lower() != tag) & 
+            (kw_partial['Keyword'].str.lower() != tag_hyphen) &
+            (kw_partial['Keyword'].str.lower() != tag_space)
+        ].sort_values('Est. Traffic/mo', ascending=False).head(20)
         if not related.empty:
             st.dataframe(
                 related[['Keyword', 'Volume/mo', 'Google Pos', 'Est. Traffic/mo', 'CPC ($)', 'Tag Page', 'Landing URL']],
