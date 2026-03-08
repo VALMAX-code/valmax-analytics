@@ -154,6 +154,22 @@ else:
 with col_f1:
     month_filter = st.selectbox("📅 Month", months_available)
 
+# Tag filter
+all_tags = set()
+if 'Теги' in df.columns:
+    for t in df['Теги'].dropna():
+        for tag in str(t).split(', '):
+            tag = tag.strip()
+            if tag:
+                all_tags.add(tag)
+tag_list = ["All"] + sorted(all_tags)
+
+col_f_tag, col_f_search = st.columns(2)
+with col_f_tag:
+    tag_filter = st.selectbox("🏷️ Tag", tag_list)
+with col_f_search:
+    search_query = st.text_input("🔍 Search by name", "")
+
 # Date range
 with col_f2:
     if 'Date' in df.columns:
@@ -178,6 +194,10 @@ if month_filter != "All":
 if date_range and len(date_range) == 2 and 'Date' in filtered.columns:
     filtered = filtered[(filtered['Date'].dt.date >= date_range[0]) & (filtered['Date'].dt.date <= date_range[1])]
 filtered = filtered[(filtered['Просмотры'] >= views_range[0]) & (filtered['Просмотры'] <= views_range[1])]
+if tag_filter != "All" and 'Теги' in filtered.columns:
+    filtered = filtered[filtered['Теги'].str.contains(tag_filter, case=False, na=False)]
+if search_query:
+    filtered = filtered[filtered['Название'].str.contains(search_query, case=False, na=False)]
 # Default sort: newest first by date
 if 'Date' in filtered.columns:
     filtered = filtered.sort_values('Date', ascending=False)
@@ -438,6 +458,12 @@ if 'Теги' in df.columns:
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=450, yaxis=dict(autorange="reversed"))
         st.plotly_chart(fig, use_container_width=True)
+    
+    # Full tags table
+    st.markdown("**All tags**")
+    tags_display = tags_df.sort_values('Shots', ascending=False).reset_index(drop=True)
+    tags_display.index = tags_display.index + 1
+    st.dataframe(tags_display, use_container_width=True, height=400)
 
 # --- PROJECT TYPES ---
 st.divider()
@@ -487,14 +513,16 @@ st.divider()
 st.markdown("### 📋 All shots")
 display_cols = ['Месяц', 'Дата', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
 available_cols = [c for c in display_cols if c in filtered.columns]
-display_df = filtered[available_cols].copy().reset_index(drop=True)
-display_df.index = display_df.index + 1  # Start from 1
+display_df = filtered[['Месяц', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']].copy()
+# Use actual datetime for sorting instead of text date
+display_df.insert(1, 'Date', filtered['Date'])
+display_df = display_df.reset_index(drop=True)
+display_df.index = display_df.index + 1
 if 'Месяц' in display_df.columns:
     display_df['Месяц'] = display_df['Месяц'].apply(_to_en_month)
-display_df.columns = ['Month' if c=='Месяц' else 'Date' if c=='Дата' else 'Name' if c=='Название' 
-                       else 'Views' if c=='Просмотры' else 'Likes' if c=='Лайки' 
-                       else 'Saves' if c=='Сохранения' else 'Comments' if c=='Комментарии'
-                       else c for c in display_df.columns]
+col_rename = {'Месяц':'Month', 'Название':'Name', 'Просмотры':'Views', 'Лайки':'Likes', 
+              'Сохранения':'Saves', 'Комментарии':'Comments', 'Кол-во тегов':'Tags'}
+display_df = display_df.rename(columns={k:v for k,v in col_rename.items() if k in display_df.columns})
 st.dataframe(display_df, use_container_width=True, height=500)
 
 # --- FOOTER ---
