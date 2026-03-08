@@ -352,22 +352,22 @@ top_col1, top_col2 = st.columns(2)
 
 with top_col1:
     st.markdown("**By views (All-time)**")
-    top_views = df.nlargest(10, 'Просмотры')[['Название', 'Просмотры', 'Лайки', 'Дата', 'Ссылка']].reset_index(drop=True) if 'Ссылка' in df.columns else df.nlargest(10, 'Просмотры')[['Название', 'Просмотры', 'Лайки', 'Дата']].reset_index(drop=True)
+    top_views = df.nlargest(10, 'Просмотры')[['Название', 'Просмотры', 'Лайки', 'Дата', 'Ссылка Dribbble']].reset_index(drop=True) if 'Ссылка Dribbble' in df.columns else df.nlargest(10, 'Просмотры')[['Название', 'Просмотры', 'Лайки', 'Дата']].reset_index(drop=True)
     top_views.index = top_views.index + 1
-    if 'Ссылка' in top_views.columns:
+    if 'Ссылка Dribbble' in top_views.columns:
         top_views['Название'] = top_views.apply(lambda r: f'<a href="{r["Ссылка"]}" target="_blank">{r["Название"]}</a>', axis=1)
-        top_views = top_views.drop(columns=['Ссылка'])
+        top_views = top_views.drop(columns=['Ссылка Dribbble'])
         st.markdown(top_views.to_html(escape=False, index=True), unsafe_allow_html=True)
     else:
         st.dataframe(top_views, use_container_width=True)
 
 with top_col2:
     st.markdown("**By likes (All-time)**")
-    top_likes = df.nlargest(10, 'Лайки')[['Название', 'Лайки', 'Просмотры', 'Дата', 'Ссылка']].reset_index(drop=True) if 'Ссылка' in df.columns else df.nlargest(10, 'Лайки')[['Название', 'Лайки', 'Просмотры', 'Дата']].reset_index(drop=True)
+    top_likes = df.nlargest(10, 'Лайки')[['Название', 'Лайки', 'Просмотры', 'Дата', 'Ссылка Dribbble']].reset_index(drop=True) if 'Ссылка Dribbble' in df.columns else df.nlargest(10, 'Лайки')[['Название', 'Лайки', 'Просмотры', 'Дата']].reset_index(drop=True)
     top_likes.index = top_likes.index + 1
-    if 'Ссылка' in top_likes.columns:
+    if 'Ссылка Dribbble' in top_likes.columns:
         top_likes['Название'] = top_likes.apply(lambda r: f'<a href="{r["Ссылка"]}" target="_blank">{r["Название"]}</a>', axis=1)
-        top_likes = top_likes.drop(columns=['Ссылка'])
+        top_likes = top_likes.drop(columns=['Ссылка Dribbble'])
         st.markdown(top_likes.to_html(escape=False, index=True), unsafe_allow_html=True)
     else:
         st.dataframe(top_likes, use_container_width=True)
@@ -513,7 +513,10 @@ st.divider()
 st.markdown("### 📋 All shots")
 display_cols = ['Месяц', 'Дата', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
 available_cols = [c for c in display_cols if c in filtered.columns]
-display_df = filtered[['Месяц', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']].copy()
+base_cols = ['Месяц', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
+if 'Ссылка Dribbble' in filtered.columns:
+    base_cols.append('Ссылка Dribbble')
+display_df = filtered[[c for c in base_cols if c in filtered.columns]].copy()
 # Use actual datetime for sorting instead of text date
 display_df.insert(1, 'Date', filtered['Date'])
 display_df = display_df.reset_index(drop=True)
@@ -521,9 +524,12 @@ display_df.index = display_df.index + 1
 if 'Месяц' in display_df.columns:
     display_df['Месяц'] = display_df['Месяц'].apply(_to_en_month)
 col_rename = {'Месяц':'Month', 'Название':'Name', 'Просмотры':'Views', 'Лайки':'Likes', 
-              'Сохранения':'Saves', 'Комментарии':'Comments', 'Кол-во тегов':'Tags'}
+              'Сохранения':'Saves', 'Комментарии':'Comments', 'Кол-во тегов':'Tags', 'Ссылка Dribbble':'Link'}
 display_df = display_df.rename(columns={k:v for k,v in col_rename.items() if k in display_df.columns})
-st.dataframe(display_df, use_container_width=True, height=500)
+col_config = {}
+if 'Link' in display_df.columns:
+    col_config['Link'] = st.column_config.LinkColumn("Link", display_text="Open ↗")
+st.dataframe(display_df, use_container_width=True, height=500, column_config=col_config)
 
 # --- FOOTER ---
 st.divider()
