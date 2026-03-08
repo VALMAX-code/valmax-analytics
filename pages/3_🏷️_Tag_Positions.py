@@ -234,6 +234,8 @@ shot_stats = filtered.groupby('Shot Name').agg(
     best_position=('Position', 'min'),
     first_places=('Position', lambda x: (x == 1).sum()),
     top5_count=('Position', lambda x: (x <= 5).sum()),
+    top10_count=('Position', lambda x: ((x > 5) & (x <= 10)).sum()),
+    outside10=('Position', lambda x: (x > 10).sum()),
     views=('Views', 'first')
 ).reset_index().sort_values('tags_count', ascending=False)
 
@@ -243,11 +245,13 @@ st.dataframe(
     shot_stats.head(20),
     column_config={
         "Shot Name": st.column_config.TextColumn("Shot", width="large"),
-        "tags_count": st.column_config.NumberColumn("Tags Found", width="small"),
-        "avg_position": st.column_config.NumberColumn("Avg Position", width="small"),
-        "best_position": st.column_config.NumberColumn("Best", width="small"),
-        "first_places": st.column_config.NumberColumn("#1 Count", width="small"),
-        "top5_count": st.column_config.NumberColumn("Top 5", width="small"),
+        "tags_count": st.column_config.NumberColumn("Tags Found", help="В скількох тегах шот знайдений у видачі", width="small"),
+        "avg_position": st.column_config.NumberColumn("Avg Pos", help="Середня позиція по всіх тегах", width="small"),
+        "best_position": st.column_config.NumberColumn("Best", help="Найкраща позиція (1 = перше місце)", width="small"),
+        "first_places": st.column_config.NumberColumn("#1", help="В скількох тегах на 1 місці", width="small"),
+        "top5_count": st.column_config.NumberColumn("Top 5", help="В скількох тегах в топ-5", width="small"),
+        "top10_count": st.column_config.NumberColumn("Top 6-10", help="В скількох тегах на позиціях 6-10", width="small"),
+        "outside10": st.column_config.NumberColumn("11+", help="В скількох тегах за межами топ-10", width="small"),
         "views": st.column_config.NumberColumn("Views", format="%d", width="small"),
     },
     use_container_width=True, hide_index=True
