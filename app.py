@@ -3,5 +3,11 @@ import streamlit as st
 st.set_page_config(page_title="VALMAX Analytics", page_icon="📊", layout="wide",
                    initial_sidebar_state="expanded")
 
-# Auto-redirect to Leads Analytics
-st.switch_page("pages/0_📋_Leads_Analytics.py")
+pages = st.navigation({
+    "VALMAX Analytics": [
+        st.Page("pages/0_📋_Leads_Analytics.py", title="Leads Analytics", icon="📋"),
+        st.Page("pages/1_📸_Shots_Analytics.py", title="Shots Analytics", icon="📸"),
+    ]
+})
+
+pages.run()
