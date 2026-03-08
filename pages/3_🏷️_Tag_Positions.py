@@ -117,24 +117,7 @@ st.caption("""
 
 # --- FILTERS ---
 st.divider()
-col_f1, col_f2, col_f3 = st.columns(3)
-
-with col_f1:
-    position_range = st.slider("Position range", 1, int(df['Position'].max()), (1, 25))
-
-with col_f2:
-    shots_list = sorted(df['Shot Name'].unique())
-    selected_shot = st.selectbox("Filter by shot", ["All"] + shots_list)
-
-with col_f3:
-    search_tag = st.text_input("Search tag", "")
-
-# Apply filters
-filtered = df[(df['Position'] >= position_range[0]) & (df['Position'] <= position_range[1])]
-if selected_shot != "All":
-    filtered = filtered[filtered['Shot Name'] == selected_shot]
-if search_tag:
-    filtered = filtered[filtered['Tag'].str.contains(search_tag, case=False, na=False)]
+filtered = df.copy()
 
 # --- POSITION DISTRIBUTION ---
 st.divider()
