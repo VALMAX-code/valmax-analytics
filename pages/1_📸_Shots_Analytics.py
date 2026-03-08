@@ -482,10 +482,17 @@ if 'Название' in df.columns:
 
 # --- ALL SHOTS TABLE ---
 st.divider()
-st.markdown("### 📋 Усі шоти")
+st.markdown("### 📋 All shots")
 display_cols = ['Месяц', 'Дата', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
 available_cols = [c for c in display_cols if c in filtered.columns]
-st.dataframe(filtered[available_cols], use_container_width=True, height=500)
+display_df = filtered[available_cols].copy().reset_index(drop=True)
+if 'Месяц' in display_df.columns:
+    display_df['Месяц'] = display_df['Месяц'].apply(_to_en_month)
+display_df.columns = ['Month' if c=='Месяц' else 'Date' if c=='Дата' else 'Name' if c=='Название' 
+                       else 'Views' if c=='Просмотры' else 'Likes' if c=='Лайки' 
+                       else 'Saves' if c=='Сохранения' else 'Comments' if c=='Комментарии'
+                       else c for c in display_df.columns]
+st.dataframe(display_df, use_container_width=True, height=500, hide_index=True)
 
 # --- FOOTER ---
 st.divider()
