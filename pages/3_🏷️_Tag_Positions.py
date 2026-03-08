@@ -334,7 +334,29 @@ st.caption("Автоматична категоризація тегів. Кол
 st.divider()
 st.markdown("### 📋 All Tag Positions")
 
-display_all = filtered.sort_values('Position').copy()
+col_at1, col_at2 = st.columns(2)
+with col_at1:
+    search_tag_all = st.text_input("🔍 Пошук по тегу", "", key="all_tags_search")
+with col_at2:
+    pos_filter = st.selectbox("📍 Фільтр по позиції", ["All", "#1", "Top 3", "Top 5", "Top 10", "Top 25", "25+"])
+
+display_all = filtered.copy()
+if search_tag_all:
+    display_all = display_all[display_all['Tag'].str.contains(search_tag_all, case=False, na=False)]
+if pos_filter == "#1":
+    display_all = display_all[display_all['Position'] == 1]
+elif pos_filter == "Top 3":
+    display_all = display_all[display_all['Position'] <= 3]
+elif pos_filter == "Top 5":
+    display_all = display_all[display_all['Position'] <= 5]
+elif pos_filter == "Top 10":
+    display_all = display_all[display_all['Position'] <= 10]
+elif pos_filter == "Top 25":
+    display_all = display_all[display_all['Position'] <= 25]
+elif pos_filter == "25+":
+    display_all = display_all[display_all['Position'] > 25]
+
+display_all = display_all.sort_values('Position').copy()
 display_all['Views'] = display_all['Views'].apply(lambda v: f"{v:,}")
 
 # Medal emojis
