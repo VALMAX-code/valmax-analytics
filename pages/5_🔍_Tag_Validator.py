@@ -171,7 +171,7 @@ if tag_input:
             resp = requests.post(
                 "https://api.dataforseo.com/v3/serp/google/organic/live/regular",
                 json=serp_payload,
-                headers={"Authorization": st.secrets.get("DATAFORSEO_AUTH", "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll")},
+                headers={"Authorization": "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll"},
                 timeout=15
             )
             serp_result = resp.json()
