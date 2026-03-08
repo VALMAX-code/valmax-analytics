@@ -693,24 +693,11 @@ if not kw_df.empty:
     else:
         display_kw = display_kw.sort_values(sort_col, ascending=sort_asc)
     
-    # Pagination
+    # Pagination setup
     PAGE_SIZE = 500
     total_pages = max(1, (len(display_kw) + PAGE_SIZE - 1) // PAGE_SIZE)
-    
-    pag_cols = st.columns([1, 3, 1])
     if 'kw_page' not in st.session_state:
         st.session_state.kw_page = 1
-    
-    with pag_cols[0]:
-        if st.button("⬅️ Назад", disabled=st.session_state.kw_page <= 1, key="kw_prev"):
-            st.session_state.kw_page -= 1
-            st.rerun()
-    with pag_cols[2]:
-        if st.button("Вперед ➡️", disabled=st.session_state.kw_page >= total_pages, key="kw_next"):
-            st.session_state.kw_page += 1
-            st.rerun()
-    with pag_cols[1]:
-        st.markdown(f"<div style='text-align:center'>Сторінка **{st.session_state.kw_page}** з **{total_pages:,}** ({len(display_kw):,} keywords, Score ≥ {min_score})</div>", unsafe_allow_html=True)
     
     start_idx = (st.session_state.kw_page - 1) * PAGE_SIZE
     display_rows = display_kw.iloc[start_idx:start_idx + PAGE_SIZE]
@@ -760,6 +747,19 @@ if not kw_df.empty:
     html_table += "</table></div>"
     
     st.components.v1.html(html_table, height=620, scrolling=True)
+    
+    # Pagination controls (below table)
+    pag_cols = st.columns([1, 3, 1])
+    with pag_cols[0]:
+        if st.button("⬅️ Назад", disabled=st.session_state.kw_page <= 1, key="kw_prev"):
+            st.session_state.kw_page -= 1
+            st.rerun()
+    with pag_cols[2]:
+        if st.button("Вперед ➡️", disabled=st.session_state.kw_page >= total_pages, key="kw_next"):
+            st.session_state.kw_page += 1
+            st.rerun()
+    with pag_cols[1]:
+        st.markdown(f"<div style='text-align:center'>Сторінка **{st.session_state.kw_page}** з **{total_pages:,}** ({len(display_kw):,} keywords, Score ≥ {min_score})</div>", unsafe_allow_html=True)
     
     st.caption("""
     **Як користуватися:**
