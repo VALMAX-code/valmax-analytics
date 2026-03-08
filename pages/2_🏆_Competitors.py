@@ -387,17 +387,24 @@ st.divider()
 st.markdown("### 📋 Full Comparison Table")
 
 display_df = df.sort_values('Followers', ascending=False).reset_index(drop=True)
-display_cols = ['Profile', 'Username', 'Followers', 'Shots Scraped']
+display_df['Profile Link'] = display_df['Username'].apply(lambda u: f"https://dribbble.com/{u}")
+display_cols = ['Profile', 'Profile Link', 'Followers', 'Shots Scraped']
 if df['Avg Views/Shot'].sum() > 0:
     display_cols += ['Avg Views/Shot', 'Avg Likes/Shot', 'Posts/Month', 'Last Post', 'Engagement %']
 
-def highlight_valmax_row(row):
-    if row.get('Username') == 'valmax':
-        return ['background-color: #43e97b22'] * len(row)
-    return [''] * len(row)
-
-styled_full = display_df[display_cols].style.apply(highlight_valmax_row, axis=1)
-st.dataframe(styled_full, use_container_width=True)
+st.dataframe(
+    display_df[display_cols],
+    column_config={
+        "Profile Link": st.column_config.LinkColumn("🔗 Dribbble", display_text="Open →", width="small"),
+        "Profile": st.column_config.TextColumn("Profile", width="medium"),
+        "Followers": st.column_config.NumberColumn("Followers", format="%d"),
+        "Avg Views/Shot": st.column_config.NumberColumn("Avg Views", format="%d"),
+        "Avg Likes/Shot": st.column_config.NumberColumn("Avg Likes", format="%d"),
+        "Posts/Month": st.column_config.NumberColumn("Posts/Mo", format="%d"),
+        "Engagement %": st.column_config.NumberColumn("Engage %", format="%d"),
+    },
+    use_container_width=True, hide_index=True
+)
 
 # --- GAP TO NEXT ---
 if valmax is not None:
