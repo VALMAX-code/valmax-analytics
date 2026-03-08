@@ -101,6 +101,36 @@ if valmax_row is not None:
         st.success(f"🔥 **Якість VALMAX вища на {diff_pct}%!** Наш avg views/shot ({valmax_avg:,}) > лідер ({leader_avg:,}). Проблема не в якості, а в кількості шотів ({valmax_shots} vs {leader_shots}).")
     else:
         st.warning(f"⚠️ Лідер ({leader['Profile']}) має вищий avg views/shot ({leader_avg:,} vs наші {valmax_avg:,}). Потрібно підвищити якість контенту.")
+    
+    # --- SHOTS GAP FROM ALL COMPETITORS ---
+    st.divider()
+    st.markdown("### 📸 Відставання по шотах від конкурентів")
+    st.caption("Скільки шотів опублікував кожен конкурент за місяць vs VALMAX. Від'ємне = ми відстаємо.")
+    
+    shots_gap = df_ranked[df_ranked['Username'] != 'valmax'][['Profile', 'Shots']].copy()
+    shots_gap['Gap'] = valmax_shots - shots_gap['Shots']
+    shots_gap = shots_gap.sort_values('Shots', ascending=True)
+    
+    colors_sg = ['#43e97b' if g >= 0 else '#f5576c' for g in shots_gap['Gap']]
+    
+    import plotly.graph_objects as go
+    fig_sg = go.Figure(go.Bar(
+        x=shots_gap['Gap'], y=shots_gap['Profile'], orientation='h',
+        marker_color=colors_sg,
+        text=[f"{g:+d}" for g in shots_gap['Gap']], textposition='outside'
+    ))
+    fig_sg.update_layout(
+        template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"),
+        height=max(350, len(shots_gap)*30), xaxis_title="Shots Gap (vs VALMAX)",
+        margin=dict(r=60, l=150)
+    )
+    fig_sg.add_vline(x=0, line_dash="dash", line_color="#636e72", opacity=0.5)
+    st.plotly_chart(fig_sg, use_container_width=True)
+    
+    behind_count = len(shots_gap[shots_gap['Gap'] < 0])
+    avg_behind = abs(shots_gap[shots_gap['Gap'] < 0]['Gap'].mean()) if behind_count > 0 else 0
+    st.caption(f"🔴 Ми відстаємо від **{behind_count}** конкурентів. Середнє відставання: **{avg_behind:.0f} шотів**. 🟢 Зелений = ми попереду.")
 
 st.divider()
 
