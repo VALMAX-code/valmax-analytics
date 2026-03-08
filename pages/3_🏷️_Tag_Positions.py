@@ -176,32 +176,7 @@ st.caption("""
 **🎯 Top Shots by Tag Appearances** — які шоти з'являються в найбільшій кількості тегів. Більше тегів = ширше охоплення в пошуку Dribbble. `avg #N` — середня позиція цього шота по всіх тегах
 """)
 
-# --- TOP #1 POSITIONS ---
-st.divider()
-st.markdown("### 🥇 All #1 Positions")
 
-first_places = filtered[filtered['Position'] == 1].sort_values('Views', ascending=False)
-if len(first_places) > 0:
-    display_1st = first_places[['Tag', 'Shot Name', 'Views', 'Total on Page']].copy()
-    display_1st['Views'] = display_1st['Views'].apply(lambda v: f"{v:,}")
-    
-    # Tag as clickable link
-    tag_urls = filtered[filtered['Position'] == 1].set_index('Tag')['Tag URL'].to_dict()
-    
-    st.dataframe(
-        display_1st,
-        column_config={
-            "Tag": st.column_config.TextColumn("Tag", width="medium"),
-            "Shot Name": st.column_config.TextColumn("Shot", width="large"),
-            "Views": st.column_config.TextColumn("Views", width="small"),
-            "Total on Page": st.column_config.NumberColumn("Competitors", help="Скільки всього шотів у видачі цього тегу (конкуренція)", width="small"),
-        },
-        use_container_width=True, hide_index=True
-    )
-else:
-    st.info("No #1 positions in current filter")
-
-st.caption("**Competitors** — кількість шотів у видачі тегу. Макс. 25 = ліміт першої сторінки Dribbble (deep scan до 100 в процесі). 2 = низька конкуренція, легше утримувати #1")
 
 # --- BEST SHOTS BY TAG COUNT ---
 st.divider()
@@ -353,15 +328,21 @@ display_all['Rank'] = display_all.apply(lambda r: f"{r['Medal']} #{r['Position']
 st.dataframe(
     display_all[['Rank', 'Tag', 'Shot Name', 'Views', 'Total on Page']],
     column_config={
-        "Rank": st.column_config.TextColumn("Position", width="small"),
-        "Tag": st.column_config.TextColumn("Tag", width="medium"),
-        "Shot Name": st.column_config.TextColumn("Shot", width="large"),
-        "Views": st.column_config.TextColumn("Views", width="small"),
-        "Total on Page": st.column_config.NumberColumn("Total", width="small"),
+        "Rank": st.column_config.TextColumn("📍 Position", help="Позиція шота VALMAX на сторінці тегу Dribbble", width="small"),
+        "Tag": st.column_config.TextColumn("🏷️ Tag", help="Тег на Dribbble (клікабельний пошук)", width="medium"),
+        "Shot Name": st.column_config.TextColumn("📸 Shot", help="Назва шота VALMAX який займає цю позицію", width="large"),
+        "Views": st.column_config.TextColumn("👁️ Views", help="Кількість переглядів шота", width="small"),
+        "Total on Page": st.column_config.NumberColumn("⚔️ Competitors", help="Кількість шотів на сторінці тегу. 25 = повна сторінка (висока конкуренція). 2-5 = мало конкурентів", width="small"),
     },
     use_container_width=True, hide_index=True,
     height=600
 )
+
+st.caption("""
+**Колонки:** 📍 Position — місце шота VALMAX у видачі тегу · 🏷️ Tag — назва тегу на Dribbble · 
+📸 Shot — який шот VALMAX тримає цю позицію · 👁️ Views — перегляди шота · 
+⚔️ Competitors — скільки всього шотів на сторінці тегу (макс. 25 = ліміт першої сторінки Dribbble)
+""")
 
 # --- TAG PERSPECTIVENESS SCORE ---
 st.divider()
