@@ -61,7 +61,7 @@ df = load_data()
 
 # --- HEADER ---
 st.markdown("# 📊 VALMAX Dribbble Analytics")
-st.markdown("*Данные в реальном времени из Google Sheets*")
+st.markdown("*Дані в реальному часі з Google Sheets*")
 st.divider()
 
 # --- FILTERS ---
@@ -74,31 +74,48 @@ def _month_sort_key(m):
            'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
     p = str(m).split()
     return int(p[1])*100+_mo.get(p[0],0) if len(p)==2 and p[0] in _mo else 0
-months = ["Усі"] + sorted(df["Месяц"].unique().tolist(), key=_month_sort_key, reverse=True) if "Месяц" in df.columns else ["Усі"]
-with col_f1:
-    month_filter = st.selectbox("📅 Місяць", months)
-    
-managers = ["Усі"] + sorted([m for m in df["Менеджер"].unique() if m]) if "Менеджер" in df.columns else ["Усі"]
-with col_f2:
-    manager_filter = st.selectbox("👨‍💼 Менеджер", managers)
+_ru_to_en_m = {'Январь':'January','Февраль':'February','Март':'March','Апрель':'April',
+               'Май':'May','Июнь':'June','Июль':'July','Август':'August',
+               'Сентябрь':'September','Октябрь':'October','Ноябрь':'November','Декабрь':'December'}
+def _to_en_month(m):
+    parts = str(m).split()
+    if len(parts) == 2 and parts[0] in _ru_to_en_m:
+        return f"{_ru_to_en_m[parts[0]]} {parts[1]}"
+    return m
 
-relevance = ["Усі", "Relevant", "Unrelevant", "Unknown"]
+if "Месяц" in df.columns:
+    en_months_map = {}
+    for m in df["Месяц"].unique():
+        en_months_map[_to_en_month(m)] = m
+    months = ["All"] + sorted(en_months_map.keys(), key=lambda x: _month_sort_key(en_months_map[x]), reverse=True)
+else:
+    months = ["All"]
+    en_months_map = {}
+with col_f1:
+    month_filter = st.selectbox("📅 Month", months)
+    
+managers = ["All"] + sorted([m for m in df["Менеджер"].unique() if m]) if "Менеджер" in df.columns else ["Усі"]
+with col_f2:
+    manager_filter = st.selectbox("👨‍💼 Manager", managers)
+
+relevance = ["All", "Relevant", "Unrelevant", "Unknown"]
 with col_f3:
     rel_filter = st.selectbox("✅ Relevant", relevance)
 
-crm_statuses = ["Усі"] + sorted([s for s in df["CRM статус"].unique() if s]) if "CRM статус" in df.columns else ["Усі"]
+crm_statuses = ["All"] + sorted([s for s in df["CRM статус"].unique() if s]) if "CRM статус" in df.columns else ["Усі"]
 with col_f4:
     crm_filter = st.selectbox("📊 CRM статус", crm_statuses)
 
 # Apply filters
 filtered = df.copy()
-if month_filter != "Усі":
-    filtered = filtered[filtered["Месяц"] == month_filter]
-if manager_filter != "Усі":
+if month_filter != "All":
+    orig_month = en_months_map.get(month_filter, month_filter)
+    filtered = filtered[filtered["Месяц"] == orig_month]
+if manager_filter != "All":
     filtered = filtered[filtered["Менеджер"] == manager_filter]
-if rel_filter != "Усі":
+if rel_filter != "All":
     filtered = filtered[filtered["Relevant"] == rel_filter]
-if crm_filter != "Усі":
+if crm_filter != "All":
     filtered = filtered[filtered["CRM статус"] == crm_filter]
 
 # --- KPI METRICS ---
@@ -269,7 +286,12 @@ if "Менеджер" in filtered.columns:
 # --- TABLE ---
 st.divider()
 st.markdown("### 📋 Усі заявки")
-st.dataframe(filtered, use_container_width=True, height=400)
+col_config = {}
+if "Ссылка Dribbble" in filtered.columns:
+    col_config["Ссылка Dribbble"] = st.column_config.LinkColumn("Dribbble", display_text="Open ↗")
+if "Ссылка Pipedrive" in filtered.columns:
+    col_config["Ссылка Pipedrive"] = st.column_config.LinkColumn("Pipedrive", display_text="Open ↗")
+st.dataframe(filtered, use_container_width=True, height=400, column_config=col_config)
 
 # --- FOOTER ---
 st.divider()
