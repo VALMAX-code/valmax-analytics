@@ -473,10 +473,10 @@ def calc_perspectiveness(tag, position, total_on_page):
         relevance = "⚪ Low"
     
     # Score calculation
-    # 1. Position closeness (20%)
-    if position <= 15: pos_score = 90
-    elif position <= 20: pos_score = 70
-    elif position <= 25: pos_score = 50
+    # 1. Position closeness (20%) — goal is top 8 (first screen)
+    if position <= 10: pos_score = 90
+    elif position <= 15: pos_score = 70
+    elif position <= 20: pos_score = 50
     else: pos_score = 20
     
     # 2. Traffic potential (25%)
@@ -545,7 +545,7 @@ for _, row in tag_best.iterrows():
         'AI Finds Dribbble': r['ai_vis'],
         'Relevance': r['relevance'],
         'Best Shot': row['shot'],
-        'Status': '✅ Achieved' if row['best_position'] <= 12 else '🎯 Opportunity'
+        'Status': '✅ Achieved' if row['best_position'] <= 8 else '🎯 Opportunity'
     })
 
 # Filter out irrelevant generic tags
@@ -585,7 +585,7 @@ achieved = len(score_df[score_df['Status'] == '✅ Achieved'])
 opportunities_count = len(score_df[score_df['Status'] == '🎯 Opportunity'])
 high_potential = len(score_df[(score_df['Status'] == '🎯 Opportunity') & (score_df['Score'] >= 60)])
 total_traffic = score_df['Est. Traffic'].sum()
-s_col1.metric("✅ Achieved (Top 12)", achieved)
+s_col1.metric("✅ Achieved (Top 8)", achieved, help="Top 8 = перший екран видачі тегу для користувача")
 s_col2.metric("🎯 Opportunities", opportunities_count)
 s_col3.metric("🔥 High Potential (60+)", high_potential)
 s_col4.metric("🚀 Est. Monthly Traffic", f"{total_traffic:,}")
@@ -614,7 +614,7 @@ st.dataframe(
 
 st.caption("""
 **Колонки:**
-- **📍 Our Pos** — позиція шота VALMAX на сторінці тегу Dribbble (ціль: потрапити в top 12)
+- **📍 Our Pos** — позиція шота VALMAX на сторінці тегу Dribbble (ціль: top 8 = перший екран видачі)
 - **⚔️ Shots** — кількість шотів на сторінці (24 = повна, висока конкуренція)
 - **🔍 Dribbble #** — позиція dribbble.com в Google top 20 по цьому запиту (якщо "—" = Dribbble не в top 20). Дані: DataForSEO SERP API
 - **📈 Vol/mo** — скільки людей шукають цей запит в Google щомісяця
