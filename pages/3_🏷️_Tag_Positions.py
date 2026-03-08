@@ -473,9 +473,12 @@ def calc_perspectiveness(tag, position, total_on_page):
     except (ValueError, TypeError):
         cpc = 0
     
-    # SERP data
-    dribbble_gpos = tag_serp.get('dribbble_google_pos') or None
-    ai_overview = tag_serp.get('ai_overview', False)
+    # SERP data (handle both local JSON and Google Sheet formats)
+    dribbble_gpos = tag_serp.get('dribbble_google_pos') or tag_serp.get('Dribbble Google Pos') or None
+    if dribbble_gpos == '' or dribbble_gpos == 0:
+        dribbble_gpos = None
+    ai_raw = tag_serp.get('ai_overview', tag_serp.get('AI Overview', False))
+    ai_overview = ai_raw if isinstance(ai_raw, (bool, str)) and ai_raw not in ('No', '') else (True if ai_raw == 'Yes' else False)
     
     # Competition on Dribbble (total shots on tag page, max ~24)
     competition = total_on_page  # Higher = more competitive
