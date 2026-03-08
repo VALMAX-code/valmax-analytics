@@ -539,7 +539,7 @@ for _, row in tag_best.iterrows():
         'Position': row['best_position'],
         'Score': total,
         'Volume': volume,
-        'CPC': round(cpc, 2),
+        'CPC': f"${cpc:.2f}",
         'Pos (25%)': pos_s,
         'Volume (25%)': vol_s,
         'Commercial (20%)': comm_s,
@@ -550,7 +550,16 @@ for _, row in tag_best.iterrows():
         'Status': '✅ Achieved' if row['best_position'] <= 12 else '🎯 Opportunity'
     })
 
+# Filter out irrelevant generic tags (high Google volume but NOT design-related searches)
+IRRELEVANT_TAGS = {
+    'video', 'testing', 'manufacturing', 'healthy', 'build', 'created', 
+    'technologies', 'tehnology', 'snowboarding', 'skiing', 'safety',
+    'mortgage', 'electric cars', 'investment', 'vision', 'innovation',
+    'medical', 'wordpress', 'chat ai', 'responsive design'
+}
+
 score_df = pd.DataFrame(scores).sort_values('Score', ascending=False)
+score_df = score_df[~score_df['Tag'].str.lower().isin(IRRELEVANT_TAGS)]
 
 # Filters
 score_col1, score_col2 = st.columns(2)
@@ -586,7 +595,7 @@ st.dataframe(
         "Position": st.column_config.NumberColumn("Pos", width="small"),
         "Score": st.column_config.ProgressColumn("Score", min_value=0, max_value=100, format="%.0f", width="small"),
         "Volume": st.column_config.NumberColumn("🔍 Vol/mo", help="Місячний обсяг пошуку в Google (DataForSEO)", format="%d", width="small"),
-        "CPC": st.column_config.NumberColumn("💲 CPC", help="Вартість кліку в Google Ads ($) — індикатор комерційності", format="$%.2f", width="small"),
+        "CPC": st.column_config.TextColumn("💲 CPC", help="Вартість кліку в Google Ads ($) — індикатор комерційності", width="small"),
         "Pos (25%)": st.column_config.NumberColumn("📍 Pos", help="Позиція: 0=вже в top 12, 90=майже в цілі #13-15", width="small"),
         "Volume (25%)": st.column_config.NumberColumn("📈 Vol", help="Score на основі search volume", width="small"),
         "Commercial (20%)": st.column_config.NumberColumn("💰 Comm", help="Комерційна цінність: CPC + тип запиту", width="small"),
