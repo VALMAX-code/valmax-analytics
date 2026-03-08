@@ -194,6 +194,9 @@ df, df_shots, source = load_data()
 
 # --- HEADER ---
 st.markdown("# 🏆 Competitors Analysis")
+import datetime as _dt
+_now = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=1)))
+st.caption(f"🕐 Останнє оновлення даних: {_now.strftime('%d %B %Y, %H:%M')} CET")
 source_labels = {
     "sheet": "Live data from Google Sheets",
     "json": "Data from latest scrape",

@@ -67,6 +67,9 @@ df, source = load_tag_data()
 
 # --- HEADER ---
 st.markdown("# 🏷️ Tag Position Tracker")
+import datetime as _dt
+_now = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=1)))
+st.caption(f"🕐 Останнє оновлення даних: {_now.strftime('%d %B %Y, %H:%M')} CET")
 if source == "json":
     st.caption("📂 Data from local scan results (top 25 per tag)")
 elif source == "live":

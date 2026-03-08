@@ -75,7 +75,9 @@ if 'Месяц' in df.columns and 'Дата заявки' in df.columns:
 
 # --- HEADER ---
 st.markdown("# 📊 VALMAX Dribbble Analytics")
-st.markdown("*Дані в реальному часі з Google Sheets*")
+import datetime as _dt
+_now = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=1)))
+st.caption(f"🕐 Останнє оновлення даних: {_now.strftime('%d %B %Y, %H:%M')} CET")
 st.divider()
 
 # --- FILTERS ---
