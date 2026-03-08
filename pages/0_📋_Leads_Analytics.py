@@ -59,6 +59,20 @@ def load_data():
 
 df = load_data()
 
+# Add year to month if missing (extract from date column)
+if 'Месяц' in df.columns and 'Дата заявки' in df.columns:
+    def _add_year(row):
+        m = str(row.get('Месяц', ''))
+        if m and len(m.split()) == 1:
+            try:
+                d = str(row.get('Дата заявки', ''))
+                year = d.split('.')[-1] if '.' in d else ''
+                return f"{m} {year}" if year else m
+            except:
+                return m
+        return m
+    df['Месяц'] = df.apply(_add_year, axis=1)
+
 # --- HEADER ---
 st.markdown("# 📊 VALMAX Dribbble Analytics")
 st.markdown("*Дані в реальному часі з Google Sheets*")
