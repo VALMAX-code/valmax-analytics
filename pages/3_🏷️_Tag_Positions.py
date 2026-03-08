@@ -430,96 +430,136 @@ def load_seo_data():
     except:
         return {}
 
+@st.cache_data(ttl=300)
+def load_serp_data():
+    """Load SERP results (Dribbble Google position, AI overview)."""
+    try:
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = Credentials.from_service_account_info(creds_dict, scopes=[
+            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/drive.readonly'
+        ])
+        gc = gspread.authorize(creds)
+        sh = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
+        ws = sh.worksheet("🔍 SERP Data")
+        rows = ws.get_all_records()
+        return {r['Tag']: r for r in rows}
+    except:
+        pass
+    try:
+        with open('/Users/openzlo/.openclaw/workspace/memory/serp-results.json') as f:
+            return json.load(f)
+    except:
+        return {}
+
 seo_data = load_seo_data()
+serp_data = load_serp_data()
 
 def calc_perspectiveness(tag, position, total_on_page):
     tag_lower = tag.lower()
     tag_seo = seo_data.get(tag, seo_data.get(tag_lower, {}))
+    tag_serp = serp_data.get(tag, serp_data.get(tag_lower, {}))
     
-    # Real volume from DataForSEO
+    # Real data from DataForSEO
     try:
-        volume = float(tag_seo.get('volume', tag_seo.get('Volume/mo', 0)) or 0)
+        volume = int(float(tag_seo.get('volume', tag_seo.get('Volume/mo', 0)) or 0))
     except (ValueError, TypeError):
         volume = 0
     try:
         cpc = float(tag_seo.get('cpc', tag_seo.get('CPC ($)', 0)) or 0)
     except (ValueError, TypeError):
         cpc = 0
-    try:
-        dribbble_gpos = int(tag_seo.get('Dribbble Google Pos', 0) or 0)
-    except (ValueError, TypeError):
-        dribbble_gpos = 0
     
-    # 1. Position score (25%) — goal is top 12
-    if position <= 12:
-        pos_score = 0  # Already achieved
-    elif position <= 15:
-        pos_score = 90  # Almost there
-    elif position <= 20:
-        pos_score = 70
-    elif position <= 25:
-        pos_score = 50
-    elif position <= 50:
-        pos_score = 30
+    # SERP data
+    dribbble_gpos = tag_serp.get('dribbble_google_pos') or None
+    ai_overview = tag_serp.get('ai_overview', False)
+    
+    # Competition on Dribbble (total shots on tag page, max ~24)
+    competition = total_on_page  # Higher = more competitive
+    
+    # Estimated traffic to Dribbble from Google
+    ctr_by_pos = {1: 0.28, 2: 0.15, 3: 0.11, 4: 0.08, 5: 0.07, 
+                  6: 0.05, 7: 0.04, 8: 0.03, 9: 0.03, 10: 0.02}
+    if dribbble_gpos and dribbble_gpos <= 10:
+        est_traffic = int(volume * ctr_by_pos.get(dribbble_gpos, 0.02))
     else:
-        pos_score = 10  # Far from goal
+        est_traffic = 0
     
-    # 2. Search volume (25%) — real data from DataForSEO
-    if volume >= 10000:
-        vol_score = 100
-    elif volume >= 5000:
-        vol_score = 85
-    elif volume >= 1000:
-        vol_score = 70
-    elif volume >= 500:
-        vol_score = 55
-    elif volume >= 100:
-        vol_score = 35
-    elif volume > 0:
-        vol_score = 15
-    else:
-        vol_score = 5  # No data
-    
-    # 3. Commercial value (20%) — CPC as proxy + keywords
+    # Commercial intent based on CPC
     if cpc >= 15:
-        comm_score = 100
-    elif cpc >= 8:
-        comm_score = 80
-    elif cpc >= 3:
-        comm_score = 50
-    elif cpc > 0:
-        comm_score = 25
-    elif any(k in tag_lower for k in COMMERCIAL_HIGH):
-        comm_score = 80
-    elif any(k in tag_lower for k in COMMERCIAL_MED):
-        comm_score = 50
-    elif any(k in tag_lower for k in COMMERCIAL_LOW):
-        comm_score = 10
+        commercial = "🔥 High"
+    elif cpc >= 5:
+        commercial = "💰 Medium"
+    elif cpc >= 1:
+        commercial = "📊 Low"
     else:
-        comm_score = 20
+        commercial = "—"
     
-    # 4. Google visibility (15%) — Dribbble tag page position in Google
-    if dribbble_gpos and 1 <= dribbble_gpos <= 3:
-        google_score = 100
-    elif dribbble_gpos and 4 <= dribbble_gpos <= 5:
-        google_score = 80
-    elif dribbble_gpos and 6 <= dribbble_gpos <= 10:
-        google_score = 50
-    elif total_on_page >= 20:
-        google_score = 40  # Proxy: popular tags likely indexed
+    # AI visibility
+    if ai_overview == 'dribbble':
+        ai_vis = "✅ Dribbble"
+    elif ai_overview:
+        ai_vis = "⚠️ AI (no Dribbble)"
     else:
-        google_score = 10
+        ai_vis = "❌"
+    
+    # VALMAX relevance
+    if any(k in tag_lower for k in VALMAX_RELEVANT):
+        relevance = "✅ High"
+    elif any(k in tag_lower for k in COMMERCIAL_HIGH + COMMERCIAL_MED):
+        relevance = "🟡 Medium"
+    else:
+        relevance = "⚪ Low"
+    
+    # Score calculation
+    # 1. Position closeness (20%)
+    if position <= 15: pos_score = 90
+    elif position <= 20: pos_score = 70
+    elif position <= 25: pos_score = 50
+    else: pos_score = 20
+    
+    # 2. Traffic potential (25%)
+    if est_traffic >= 200: vol_score = 100
+    elif est_traffic >= 50: vol_score = 80
+    elif est_traffic >= 10: vol_score = 50
+    elif volume >= 1000: vol_score = 30
+    elif volume >= 100: vol_score = 15
+    else: vol_score = 5
+    
+    # 3. Commercial value (20%)
+    if cpc >= 15: comm_score = 100
+    elif cpc >= 8: comm_score = 80
+    elif cpc >= 3: comm_score = 50
+    elif cpc > 0: comm_score = 25
+    else: comm_score = 10
+    
+    # 4. Google+AI visibility (20%)
+    goog_score = 0
+    if dribbble_gpos and dribbble_gpos <= 3: goog_score = 100
+    elif dribbble_gpos and dribbble_gpos <= 5: goog_score = 80
+    elif dribbble_gpos and dribbble_gpos <= 10: goog_score = 60
+    elif dribbble_gpos and dribbble_gpos <= 20: goog_score = 30
+    if ai_overview: goog_score = min(goog_score + 20, 100)
     
     # 5. VALMAX relevance (15%)
-    if any(k in tag_lower for k in VALMAX_RELEVANT):
-        rel_score = 100
-    else:
-        rel_score = 15
+    if relevance == "✅ High": rel_score = 100
+    elif relevance == "🟡 Medium": rel_score = 60
+    else: rel_score = 15
     
-    total = (pos_score * 0.25 + vol_score * 0.25 + comm_score * 0.20 + 
-             google_score * 0.15 + rel_score * 0.15)
+    total = (pos_score * 0.20 + vol_score * 0.25 + comm_score * 0.20 + 
+             goog_score * 0.20 + rel_score * 0.15)
     
-    return round(total, 1), pos_score, vol_score, comm_score, google_score, rel_score, volume, cpc
+    return {
+        'score': round(total, 1),
+        'volume': volume,
+        'cpc': cpc,
+        'dribbble_gpos': dribbble_gpos,
+        'est_traffic': est_traffic,
+        'commercial': commercial,
+        'ai_vis': ai_vis,
+        'relevance': relevance,
+        'competition': competition,
+    }
 
 # Calculate for all tags (best position per tag)
 tag_best = df.groupby('Tag').agg(
@@ -531,26 +571,23 @@ tag_best = df.groupby('Tag').agg(
 
 scores = []
 for _, row in tag_best.iterrows():
-    total, pos_s, vol_s, comm_s, goog_s, rel_s, volume, cpc = calc_perspectiveness(
-        row['Tag'], row['best_position'], row['total_on_page']
-    )
+    r = calc_perspectiveness(row['Tag'], row['best_position'], row['total_on_page'])
     scores.append({
         'Tag': row['Tag'],
-        'Position': row['best_position'],
-        'Score': total,
-        'Volume': volume,
-        'CPC': f"${cpc:.2f}",
-        'Pos (25%)': pos_s,
-        'Volume (25%)': vol_s,
-        'Commercial (20%)': comm_s,
-        'Google (15%)': goog_s,
-        'Relevant (15%)': rel_s,
-        'Shot': row['shot'],
-        'Views': row['views'],
+        'Our Position': row['best_position'],
+        'Score': r['score'],
+        'Competition': r['competition'],
+        'Dribbble in Google': f"#{r['dribbble_gpos']}" if r['dribbble_gpos'] else "—",
+        'Volume/mo': r['volume'],
+        'Est. Traffic': r['est_traffic'],
+        'Commercial': r['commercial'],
+        'AI Finds Dribbble': r['ai_vis'],
+        'Relevance': r['relevance'],
+        'Best Shot': row['shot'],
         'Status': '✅ Achieved' if row['best_position'] <= 12 else '🎯 Opportunity'
     })
 
-# Filter out irrelevant generic tags (high Google volume but NOT design-related searches)
+# Filter out irrelevant generic tags
 IRRELEVANT_TAGS = {
     'video', 'testing', 'manufacturing', 'healthy', 'build', 'created', 
     'technologies', 'tehnology', 'snowboarding', 'skiing', 'safety',
@@ -562,11 +599,13 @@ score_df = pd.DataFrame(scores).sort_values('Score', ascending=False)
 score_df = score_df[~score_df['Tag'].str.lower().isin(IRRELEVANT_TAGS)]
 
 # Filters
-score_col1, score_col2 = st.columns(2)
+score_col1, score_col2, score_col3 = st.columns(3)
 with score_col1:
     status_filter = st.selectbox("Статус", ["🎯 Opportunities only", "All", "✅ Achieved only"])
 with score_col2:
     min_score = st.slider("Min Score", 0, 100, 30)
+with score_col3:
+    relevance_filter = st.selectbox("Relevance", ["All", "✅ High", "🟡 Medium", "⚪ Low"])
 
 if status_filter == "🎯 Opportunities only":
     score_filtered = score_df[score_df['Status'] == '🎯 Opportunity']
@@ -576,33 +615,36 @@ else:
     score_filtered = score_df
 
 score_filtered = score_filtered[score_filtered['Score'] >= min_score]
+if relevance_filter != "All":
+    score_filtered = score_filtered[score_filtered['Relevance'] == relevance_filter]
 
 # KPIs
-s_col1, s_col2, s_col3, s_col4 = st.columns(4)
+s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
 achieved = len(score_df[score_df['Status'] == '✅ Achieved'])
 opportunities_count = len(score_df[score_df['Status'] == '🎯 Opportunity'])
 high_potential = len(score_df[(score_df['Status'] == '🎯 Opportunity') & (score_df['Score'] >= 60)])
+total_traffic = score_df['Est. Traffic'].sum()
 s_col1.metric("✅ Achieved (Top 12)", achieved)
 s_col2.metric("🎯 Opportunities", opportunities_count)
 s_col3.metric("🔥 High Potential (60+)", high_potential)
-s_col4.metric("📊 Avg Score", f"{score_df['Score'].mean():.0f}")
+s_col4.metric("🚀 Est. Monthly Traffic", f"{total_traffic:,}")
+s_col5.metric("📊 Avg Score", f"{score_df['Score'].mean():.0f}")
 
 # Table
 st.dataframe(
     score_filtered,
     column_config={
-        "Tag": st.column_config.TextColumn("Tag", width="medium"),
-        "Position": st.column_config.NumberColumn("Pos", width="small"),
-        "Score": st.column_config.ProgressColumn("Score", min_value=0, max_value=100, format="%.0f", width="small"),
-        "Volume": st.column_config.NumberColumn("🔍 Vol/mo", help="Місячний обсяг пошуку в Google (DataForSEO)", format="%d", width="small"),
-        "CPC": st.column_config.TextColumn("💲 CPC", help="Вартість кліку в Google Ads ($) — індикатор комерційності", width="small"),
-        "Pos (25%)": st.column_config.NumberColumn("📍 Pos", help="Позиція: 0=вже в top 12, 90=майже в цілі #13-15", width="small"),
-        "Volume (25%)": st.column_config.NumberColumn("📈 Vol", help="Score на основі search volume", width="small"),
-        "Commercial (20%)": st.column_config.NumberColumn("💰 Comm", help="Комерційна цінність: CPC + тип запиту", width="small"),
-        "Google (15%)": st.column_config.NumberColumn("🔍 SEO", help="Позиція Dribbble tag page в Google", width="small"),
-        "Relevant (15%)": st.column_config.NumberColumn("🎯 Rel", help="Релевантність послугам VALMAX", width="small"),
-        "Shot": st.column_config.TextColumn("Best Shot", width="large"),
-        "Views": st.column_config.NumberColumn("Views", format="%d", width="small"),
+        "Tag": st.column_config.TextColumn("🏷️ Tag", width="medium"),
+        "Our Position": st.column_config.NumberColumn("📍 Our Pos", help="Позиція VALMAX шота на сторінці тегу Dribbble", width="small"),
+        "Score": st.column_config.ProgressColumn("⭐ Score", min_value=0, max_value=100, format="%.0f", width="small"),
+        "Competition": st.column_config.NumberColumn("⚔️ Shots", help="Кількість шотів на сторінці тегу (24 = повна, висока конкуренція)", width="small"),
+        "Dribbble in Google": st.column_config.TextColumn("🔍 Dribbble #", help="Позиція dribbble.com в Google по цьому запиту", width="small"),
+        "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", help="Місячний обсяг пошуку в Google (DataForSEO)", format="%d", width="small"),
+        "Est. Traffic": st.column_config.NumberColumn("🚀 Traffic", help="Потенційний трафік на Dribbble з Google (Volume × CTR по позиції)", format="%d", width="small"),
+        "Commercial": st.column_config.TextColumn("💰 Intent", help="Комерційність запиту на основі CPC ($15+=High, $5+=Med)", width="small"),
+        "AI Finds Dribbble": st.column_config.TextColumn("🤖 AI", help="Чи знаходить Google AI Overview Dribbble по цьому запиту", width="small"),
+        "Relevance": st.column_config.TextColumn("🎯 Relevance", help="Відповідність послугам VALMAX", width="small"),
+        "Best Shot": st.column_config.TextColumn("Best Shot", width="large"),
         "Status": st.column_config.TextColumn("Status", width="small"),
     },
     use_container_width=True, hide_index=True,
@@ -610,14 +652,15 @@ st.dataframe(
 )
 
 st.caption("""
-**Як читати Score (дані: DataForSEO API):**
-- **🔍 Vol/mo** — реальний місячний обсяг пошуку в Google
-- **💲 CPC** — ціна кліку в Google Ads (вище = комерційніший запит)
-- **📍 Pos (25%)** — 0 = вже досягнуто (top 12), 90 = майже в цілі (#13-15)
-- **📈 Vol (25%)** — score на основі search volume (10K+ = 100, 1K+ = 70, 100+ = 35)
-- **💰 Comm (20%)** — комерційна цінність на основі CPC ($15+ = 100, $8+ = 80)
-- **🔍 SEO (15%)** — позиція Dribbble tag page в Google (#1-3 = 100, #4-5 = 80)
-- **🎯 Rel (15%)** — відповідність послугам VALMAX
+**Колонки:**
+- **📍 Our Pos** — позиція шота VALMAX на сторінці тегу Dribbble (ціль: потрапити в top 12)
+- **⚔️ Shots** — кількість шотів на сторінці (24 = повна, висока конкуренція)
+- **🔍 Dribbble #** — позиція dribbble.com в Google по цьому запиту (реальні дані DataForSEO SERP)
+- **📈 Vol/mo** — скільки людей шукають цей запит в Google щомісяця
+- **🚀 Traffic** — потенційний трафік на Dribbble = Volume × CTR по позиції в Google
+- **💰 Intent** — комерційність: 🔥High ($15+ CPC), 💰Med ($5+), 📊Low ($1+)
+- **🤖 AI** — чи з'являється Dribbble в Google AI Overview по цьому запиту
+- **🎯 Relevance** — відповідність послугам VALMAX (UI/UX, dashboards, SaaS, web design)
 """)
 
 # --- TOP OPPORTUNITIES CHART ---
