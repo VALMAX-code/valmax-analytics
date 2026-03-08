@@ -124,7 +124,7 @@ p5.metric("💾 Усього збережень", f"{df['Сохранения'].
 # --- FILTERS ---
 st.divider()
 st.markdown("#### 🔍 Фільтри")
-col_f1, col_f2, col_f3 = st.columns([1, 1, 1])
+col_f1, col_f3 = st.columns([1, 2])
 
 # Month filter with English month names, sorted newest first
 if "Месяц" in df.columns:
@@ -154,10 +154,6 @@ else:
 with col_f1:
     month_filter = st.selectbox("📅 Month", months_available)
 
-# Search by name
-with col_f2:
-    search_query = st.text_input("🔍 Search by name", "")
-
 # Views range
 with col_f3:
     max_views_val = int(df['Просмотры'].max()) if len(df) > 0 else 100000
@@ -169,8 +165,6 @@ filtered = df.copy()
 if month_filter != "All":
     original_month = month_map.get(month_filter, month_filter)
     filtered = filtered[filtered["Месяц"] == original_month]
-if search_query:
-    filtered = filtered[filtered['Название'].str.contains(search_query, case=False, na=False)]
 filtered = filtered[(filtered['Просмотры'] >= views_range[0]) & (filtered['Просмотры'] <= views_range[1])]
 # Default sort: newest first by date
 if 'Date' in filtered.columns:
