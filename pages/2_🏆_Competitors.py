@@ -43,7 +43,17 @@ def load_data():
             ws = sh.worksheet("🏆 Competitors")
             rows = ws.get_all_records()
             if rows:
-                return pd.DataFrame(rows), None, "sheet"
+                df_profiles = pd.DataFrame(rows)
+                # Try to load shots too
+                df_shots = None
+                try:
+                    ws2 = sh.worksheet("🏆 Competitor Shots")
+                    shot_rows = ws2.get_all_records()
+                    if shot_rows:
+                        df_shots = pd.DataFrame(shot_rows)
+                except:
+                    pass
+                return df_profiles, df_shots, "sheet"
         except:
             pass
     except:
