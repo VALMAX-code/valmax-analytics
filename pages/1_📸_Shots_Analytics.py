@@ -475,7 +475,7 @@ if 'Название' in df.columns:
         type_perf = df.groupby('Тип проекта').agg({
             'Просмотры': 'mean', 'Лайки': 'mean', 'Engagement': 'mean'
         }).round(0).reset_index()
-        type_perf.columns = ['Тип', 'Avg Views', 'Avg Likes', 'Avg Engagement']
+        type_perf.columns = ['Type', 'Avg Views', 'Avg Likes', 'Avg Engagement']
         fig = px.bar(type_perf, x='Type', y='Avg Views', template="plotly_white",
                      color='Avg Engagement', color_continuous_scale=['#f5576c', '#00d4aa'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
