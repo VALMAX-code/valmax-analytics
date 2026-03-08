@@ -132,12 +132,19 @@ if tag_input:
     # Volume & CPC
     volume = 0
     cpc = 0
+    def parse_cpc(val):
+        if isinstance(val, (int, float)):
+            return float(val)
+        if isinstance(val, str):
+            return float(val.replace('$', '').replace(',', '').strip() or 0)
+        return 0.0
+    
     if not kw_match.empty:
         volume = int(kw_match.iloc[0].get('Volume/mo', 0) or 0)
-        cpc = float(kw_match.iloc[0].get('CPC ($)', 0) or 0)
+        cpc = parse_cpc(kw_match.iloc[0].get('CPC ($)', 0))
     if not volume and seo:
         volume = int(seo.get('Volume/mo', 0) or 0)
-        cpc = float(seo.get('CPC ($)', 0) or 0)
+        cpc = parse_cpc(seo.get('CPC ($)', 0))
     
     # Fix CPC from Google Sheets (SEO Data sheet still has ×100 bug)
     if seo and cpc > 100:
