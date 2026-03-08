@@ -178,7 +178,9 @@ if month_filter != "All":
 if date_range and len(date_range) == 2 and 'Date' in filtered.columns:
     filtered = filtered[(filtered['Date'].dt.date >= date_range[0]) & (filtered['Date'].dt.date <= date_range[1])]
 filtered = filtered[(filtered['Просмотры'] >= views_range[0]) & (filtered['Просмотры'] <= views_range[1])]
-filtered = filtered.sort_values('Просмотры', ascending=False)
+# Default sort: newest first by date
+if 'Date' in filtered.columns:
+    filtered = filtered.sort_values('Date', ascending=False)
 
 # Filtered metrics
 st.divider()
@@ -486,13 +488,14 @@ st.markdown("### 📋 All shots")
 display_cols = ['Месяц', 'Дата', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
 available_cols = [c for c in display_cols if c in filtered.columns]
 display_df = filtered[available_cols].copy().reset_index(drop=True)
+display_df.index = display_df.index + 1  # Start from 1
 if 'Месяц' in display_df.columns:
     display_df['Месяц'] = display_df['Месяц'].apply(_to_en_month)
 display_df.columns = ['Month' if c=='Месяц' else 'Date' if c=='Дата' else 'Name' if c=='Название' 
                        else 'Views' if c=='Просмотры' else 'Likes' if c=='Лайки' 
                        else 'Saves' if c=='Сохранения' else 'Comments' if c=='Комментарии'
                        else c for c in display_df.columns]
-st.dataframe(display_df, use_container_width=True, height=500, hide_index=True)
+st.dataframe(display_df, use_container_width=True, height=500)
 
 # --- FOOTER ---
 st.divider()
