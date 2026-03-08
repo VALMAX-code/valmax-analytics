@@ -115,8 +115,6 @@ st.caption("""
 **📍 Total Positions** — загальна кількість знайдених позицій шот×тег (один шот може бути в кількох тегах)
 """)
 
-# --- FILTERS ---
-st.divider()
 filtered = df.copy()
 
 # --- POSITION DISTRIBUTION ---
