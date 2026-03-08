@@ -14,19 +14,27 @@ st.sidebar.markdown("📋 **Leads Analytics** ← вы здесь")
 st.sidebar.markdown("[📸 Shots Analytics](/shots)")
 st.sidebar.divider()
 
-# --- STYLES ---
+# --- Modern Light Theme ---
 st.markdown("""
 <style>
+    .stApp { background-color: #f5f7fb; }
+    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); }
+    section[data-testid="stSidebar"] * { color: #fff !important; }
+    section[data-testid="stSidebar"] a { color: #e0d4ff !important; }
     .block-container { padding-top: 1rem; }
     [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        border: 1px solid #0f3460;
-        border-radius: 12px;
-        padding: 16px 20px;
-        color: white;
+        background: #ffffff;
+        border: none;
+        border-radius: 14px;
+        padding: 18px 22px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
-    [data-testid="stMetricValue"] { color: #e94560; font-size: 2rem; }
-    [data-testid="stMetricLabel"] { color: #a3b1c6; }
+    [data-testid="stMetricValue"] { color: #667eea; font-size: 2rem; font-weight: 700; }
+    [data-testid="stMetricLabel"] { color: #8892a4; }
+    h1 { color: #2d3436 !important; font-weight: 800 !important; }
+    h2, h3 { color: #2d3436 !important; font-weight: 700 !important; }
+    .stDivider { border-color: #e8ecf1 !important; }
+    .stDataFrame { border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -146,10 +154,10 @@ with col1:
     if "Месяц" in df.columns and "Relevant" in df.columns:
         month_data = df.groupby(["Месяц", "Relevant"]).size().reset_index(name="Кол-во")
         fig = px.bar(month_data, x="Месяц", y="Кол-во", color="Relevant",
-                     color_discrete_map={"Relevant": "#00d4aa", "Unrelevant": "#e94560", "Unknown": "#a3b1c6"},
-                     barmode="stack", template="plotly_dark")
+                     color_discrete_map={"Relevant": "#43e97b", "Unrelevant": "#f5576c", "Unknown": "#b2bec3"},
+                     barmode="stack", template="plotly_white")
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=350)
+                         font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
 with col2:
@@ -157,9 +165,9 @@ with col2:
     if "Страна/Город" in filtered.columns:
         geo = filtered["Страна/Город"].value_counts().reset_index()
         geo.columns = ["Страна", "Кол-во"]
-        fig = px.pie(geo, names="Страна", values="Кол-во", template="plotly_dark",
+        fig = px.pie(geo, names="Страна", values="Кол-во", template="plotly_white",
                      color_discrete_sequence=px.colors.qualitative.Set2)
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
 # --- ROW 2: CRM статус + Бюджеты ---
@@ -171,10 +179,10 @@ with col_crm:
     if "CRM статус" in filtered.columns:
         crm = filtered["CRM статус"].value_counts().reset_index()
         crm.columns = ["Статус", "Кол-во"]
-        color_map = {"Open 💙": "#4361ee", "Lost ❌": "#e94560", "Won ✅": "#00d4aa", "No matches 🔄": "#a3b1c6"}
-        fig = px.pie(crm, names="Статус", values="Кол-во", template="plotly_dark",
+        color_map = {"Open 💙": "#667eea", "Lost ❌": "#f5576c", "Won ✅": "#43e97b", "No matches 🔄": "#b2bec3"}
+        fig = px.pie(crm, names="Статус", values="Кол-во", template="plotly_white",
                      color="Статус", color_discrete_map=color_map)
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
 with col_budget:
@@ -185,10 +193,10 @@ with col_budget:
         budget_order = ["Unknown", "$1000-$3000", "$3000-$5000", "$5000-$10000", "$10000-$15000", "$15000+"]
         budgets["sort"] = budgets["Бюджет"].apply(lambda x: next((i for i, o in enumerate(budget_order) if str(x).strip() == o), 99))
         budgets = budgets.sort_values("sort")
-        fig = px.bar(budgets, x="Бюджет", y="Кол-во", template="plotly_dark",
-                     color_discrete_sequence=["#4361ee"])
+        fig = px.bar(budgets, x="Бюджет", y="Кол-во", template="plotly_white",
+                     color_discrete_sequence=["#667eea"])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=350, showlegend=False)
+                         font=dict(color="#636e72"), height=350, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
 # --- ROW 3: Время ответа + Типы проектов ---
@@ -203,10 +211,10 @@ with col3:
         order = ["<30 мин", "<1ч", "<2ч", "<4ч", "<24ч", ">24ч"]
         time_data["sort"] = time_data["Время"].apply(lambda x: next((i for i, o in enumerate(order) if str(x).strip() == o), 99))
         time_data = time_data.sort_values("sort")
-        fig = px.bar(time_data, x="Время", y="Кол-во", template="plotly_dark",
-                     color="Кол-во", color_continuous_scale=["#e94560", "#00d4aa"])
+        fig = px.bar(time_data, x="Время", y="Кол-во", template="plotly_white",
+                     color="Кол-во", color_continuous_scale=["#f5576c", "#43e97b"])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=350, showlegend=False)
+                         font=dict(color="#636e72"), height=350, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
 with col4:
@@ -214,9 +222,9 @@ with col4:
     if "Тип проекта" in filtered.columns:
         types = filtered["Тип проекта"].value_counts().reset_index()
         types.columns = ["Тип", "Кол-во"]
-        fig = px.pie(types, names="Тип", values="Кол-во", template="plotly_dark",
+        fig = px.pie(types, names="Тип", values="Кол-во", template="plotly_white",
                      color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
 # --- FUNNEL ---
@@ -237,10 +245,10 @@ fig = go.Figure(go.Funnel(
     y=funnel_data["Этап"],
     x=funnel_data["Кол-во"],
     textinfo="value+percent initial",
-    marker=dict(color=["#4361ee", "#3a86ff", "#f77f00", "#e94560", "#00d4aa"]),
+    marker=dict(color=["#667eea", "#764ba2", "#f093fb", "#f5576c", "#43e97b"]),
 ))
-fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
-                 plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
+fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
+                 plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
 st.plotly_chart(fig, use_container_width=True)
 
 # --- MANAGERS ---
@@ -249,10 +257,10 @@ st.markdown("### 👨‍💼 Менеджеры")
 if "Менеджер" in filtered.columns:
     mgr = filtered["Менеджер"].value_counts().reset_index()
     mgr.columns = ["Менеджер", "Заявок"]
-    fig = px.bar(mgr, x="Менеджер", y="Заявок", template="plotly_dark",
-                 color="Менеджер", color_discrete_sequence=["#4361ee", "#e94560", "#00d4aa"])
+    fig = px.bar(mgr, x="Менеджер", y="Заявок", template="plotly_white",
+                 color="Менеджер", color_discrete_sequence=["#667eea", "#f093fb", "#43e97b"])
     fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                     font=dict(color="#a3b1c6"), height=300, showlegend=False)
+                     font=dict(color="#636e72"), height=300, showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
 
 # --- TABLE ---

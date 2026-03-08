@@ -15,14 +15,27 @@ st.sidebar.markdown("[📋 Leads Analytics](/)")
 st.sidebar.markdown("📸 **Shots Analytics** ← вы здесь")
 st.sidebar.divider()
 
-# --- Dark theme CSS ---
+# --- Modern Light Theme CSS ---
 st.markdown("""
 <style>
-    .stApp { background-color: #0e1117; }
-    [data-testid="stMetric"] { background: #1a1d23; padding: 15px; border-radius: 10px; border: 1px solid #2d2d2d; }
-    [data-testid="stMetricValue"] { color: #4361ee; }
-    h1, h2, h3 { color: #e0e0e0 !important; }
-    .stDivider { border-color: #2d2d2d !important; }
+    .stApp { background-color: #f5f7fb; }
+    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); }
+    section[data-testid="stSidebar"] * { color: #fff !important; }
+    section[data-testid="stSidebar"] a { color: #e0d4ff !important; }
+    [data-testid="stMetric"] { 
+        background: #ffffff; padding: 18px; border-radius: 14px; 
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: none;
+    }
+    [data-testid="stMetricValue"] { color: #667eea; font-weight: 700; }
+    [data-testid="stMetricLabel"] { color: #8892a4; }
+    h1 { color: #2d3436 !important; font-weight: 800 !important; }
+    h2, h3 { color: #2d3436 !important; font-weight: 700 !important; }
+    .stTabs [data-baseweb="tab"] { color: #667eea; font-weight: 600; }
+    .stTabs [aria-selected="true"] { border-bottom: 3px solid #667eea; }
+    .stDivider { border-color: #e8ecf1 !important; }
+    .stDataFrame { border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    div[data-testid="stNumberInput"] input { border-radius: 10px; }
+    div[data-baseweb="select"] { border-radius: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -180,39 +193,39 @@ if monthly:
     with tab1:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Просмотры'], name='Просмотры',
-                            marker_color='#4361ee'))
+                            marker_color='#667eea'))
         fig.add_trace(go.Scatter(x=mdf_recent['Месяц'], y=mdf_recent['Просмотры'], name='Тренд',
-                                line=dict(color='#00d4aa', width=2), mode='lines+markers'))
-        fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", 
-                         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=400)
+                                line=dict(color='#43e97b', width=2), mode='lines+markers'))
+        fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", 
+                         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=400)
         st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Лайки'], name='Лайки', marker_color='#e94560'))
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Сохранения'], name='Сохранения', marker_color='#f77f00'))
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Комментарии'], name='Комменты', marker_color='#00d4aa'))
-        fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
-                         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=400, barmode='group')
+        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Лайки'], name='Лайки', marker_color='#f093fb'))
+        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Сохранения'], name='Сохранения', marker_color='#feca57'))
+        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Комментарии'], name='Комменты', marker_color='#43e97b'))
+        fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
+                         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=400, barmode='group')
         st.plotly_chart(fig, use_container_width=True)
     
     with tab3:
-        fig = px.bar(mdf_recent, x='Месяц', y='Шотов', template="plotly_dark",
-                     color_discrete_sequence=['#4361ee'])
+        fig = px.bar(mdf_recent, x='Месяц', y='Шотов', template="plotly_white",
+                     color_discrete_sequence=['#667eea'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=400)
+                         font=dict(color="#636e72"), height=400)
         st.plotly_chart(fig, use_container_width=True)
     
     with tab4:
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=mdf_recent['Месяц'], y=mdf_recent['Avg Views/Shot'],
                                 mode='lines+markers', name='Avg Views/Shot',
-                                line=dict(color='#4361ee', width=3), marker=dict(size=10)))
+                                line=dict(color='#667eea', width=3), marker=dict(size=10)))
         fig.add_trace(go.Scatter(x=mdf_recent['Месяц'], y=mdf_recent['Avg Likes/Shot'],
                                 mode='lines+markers', name='Avg Likes/Shot',
-                                line=dict(color='#e94560', width=3), marker=dict(size=10), yaxis='y2'))
-        fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
-                         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=400,
+                                line=dict(color='#f093fb', width=3), marker=dict(size=10), yaxis='y2'))
+        fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
+                         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=400,
                          yaxis2=dict(title='Avg Likes/Shot', overlaying='y', side='right', showgrid=False))
         st.plotly_chart(fig, use_container_width=True)
 
@@ -277,20 +290,20 @@ with eng_col1:
         monthly_eng['sort'] = monthly_eng['Месяц'].apply(month_sort)
         monthly_eng = monthly_eng.sort_values('sort').tail(12)
         
-        fig = px.line(monthly_eng, x='Месяц', y='Engagement', template="plotly_dark",
-                     markers=True, color_discrete_sequence=['#00d4aa'])
+        fig = px.line(monthly_eng, x='Месяц', y='Engagement', template="plotly_white",
+                     markers=True, color_discrete_sequence=['#43e97b'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=350, yaxis_title="Engagement %")
+                         font=dict(color="#636e72"), height=350, yaxis_title="Engagement %")
         st.plotly_chart(fig, use_container_width=True)
 
 with eng_col2:
     st.markdown("**Просмотры vs Engagement (scatter)**")
     if 'Engagement' in df.columns:
         fig = px.scatter(df, x='Просмотры', y='Engagement', hover_name='Название',
-                        size='Лайки', template="plotly_dark",
-                        color_discrete_sequence=['#4361ee'])
+                        size='Лайки', template="plotly_white",
+                        color_discrete_sequence=['#667eea'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=350)
+                         font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
 # --- TAGS ANALYSIS ---
@@ -326,19 +339,19 @@ if 'Теги' in df.columns:
     with tag_col1:
         st.markdown("**Самые используемые теги**")
         top_used = tags_df.nlargest(15, 'Шотов')
-        fig = px.bar(top_used, x='Шотов', y='Тег', orientation='h', template="plotly_dark",
-                     color_discrete_sequence=['#4361ee'])
+        fig = px.bar(top_used, x='Шотов', y='Тег', orientation='h', template="plotly_white",
+                     color_discrete_sequence=['#667eea'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=450, yaxis=dict(autorange="reversed"))
+                         font=dict(color="#636e72"), height=450, yaxis=dict(autorange="reversed"))
         st.plotly_chart(fig, use_container_width=True)
     
     with tag_col2:
         st.markdown("**Теги с лучшим Avg Views/Shot** (мин. 3 шота)")
         best_tags = tags_df[tags_df['Шотов'] >= 3].nlargest(15, 'Avg Views/Shot')
-        fig = px.bar(best_tags, x='Avg Views/Shot', y='Тег', orientation='h', template="plotly_dark",
-                     color_discrete_sequence=['#00d4aa'])
+        fig = px.bar(best_tags, x='Avg Views/Shot', y='Тег', orientation='h', template="plotly_white",
+                     color_discrete_sequence=['#43e97b'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=450, yaxis=dict(autorange="reversed"))
+                         font=dict(color="#636e72"), height=450, yaxis=dict(autorange="reversed"))
         st.plotly_chart(fig, use_container_width=True)
 
 # --- PROJECT TYPES ---
@@ -368,9 +381,9 @@ if 'Название' in df.columns:
     with type_col1:
         type_counts = df['Тип проекта'].value_counts().reset_index()
         type_counts.columns = ['Тип', 'Кол-во']
-        fig = px.pie(type_counts, names='Тип', values='Кол-во', template="plotly_dark",
+        fig = px.pie(type_counts, names='Тип', values='Кол-во', template="plotly_white",
                      color_discrete_sequence=px.colors.qualitative.Set2)
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#a3b1c6"), height=350)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
     
     with type_col2:
@@ -378,10 +391,10 @@ if 'Название' in df.columns:
             'Просмотры': 'mean', 'Лайки': 'mean', 'Engagement': 'mean'
         }).round(0).reset_index()
         type_perf.columns = ['Тип', 'Avg Views', 'Avg Likes', 'Avg Engagement']
-        fig = px.bar(type_perf, x='Тип', y='Avg Views', template="plotly_dark",
-                     color='Avg Engagement', color_continuous_scale=['#e94560', '#00d4aa'])
+        fig = px.bar(type_perf, x='Тип', y='Avg Views', template="plotly_white",
+                     color='Avg Engagement', color_continuous_scale=['#f5576c', '#00d4aa'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                         font=dict(color="#a3b1c6"), height=350)
+                         font=dict(color="#636e72"), height=350)
         st.plotly_chart(fig, use_container_width=True)
 
 # --- ALL SHOTS TABLE ---
