@@ -457,8 +457,11 @@ if 'Теги' in df.columns:
         st.caption(f"{len(tag_shots)} shots with tag **{selected_tag}**")
         
         # Build HTML table with clickable names
+        show_all = st.checkbox("View all", key="tag_view_all") if len(tag_shots) > 20 else True
+        display_shots = tag_shots if show_all else tag_shots.head(20)
+        
         rows_html = ""
-        for i, row in tag_shots.iterrows():
+        for i, row in display_shots.iterrows():
             link = row.get('Ссылка Dribbble', '')
             name = row.get('Название', '')
             name_cell = f'<a href="{link}" target="_blank">{name}</a>' if link else name
@@ -470,6 +473,8 @@ if 'Теги' in df.columns:
             <th style="padding:8px">Likes</th><th style="padding:8px">Saves</th><th style="padding:8px">Date</th>
         </tr></thead><tbody>{rows_html}</tbody></table>"""
         st.markdown(html, unsafe_allow_html=True)
+        if not show_all and len(tag_shots) > 20:
+            st.caption(f"Showing 20 of {len(tag_shots)} shots")
 
 # --- PROJECT TYPES ---
 st.divider()
