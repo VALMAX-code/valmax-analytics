@@ -154,22 +154,6 @@ else:
 with col_f1:
     month_filter = st.selectbox("📅 Month", months_available)
 
-# Tag filter
-all_tags = set()
-if 'Теги' in df.columns:
-    for t in df['Теги'].dropna():
-        for tag in str(t).split(', '):
-            tag = tag.strip()
-            if tag:
-                all_tags.add(tag)
-tag_list = ["All"] + sorted(all_tags)
-
-col_f_tag, col_f_search = st.columns(2)
-with col_f_tag:
-    tag_filter = st.selectbox("🏷️ Tag", tag_list)
-with col_f_search:
-    search_query = st.text_input("🔍 Search by name", "")
-
 # Date range
 with col_f2:
     if 'Date' in df.columns:
@@ -194,10 +178,6 @@ if month_filter != "All":
 if date_range and len(date_range) == 2 and 'Date' in filtered.columns:
     filtered = filtered[(filtered['Date'].dt.date >= date_range[0]) & (filtered['Date'].dt.date <= date_range[1])]
 filtered = filtered[(filtered['Просмотры'] >= views_range[0]) & (filtered['Просмотры'] <= views_range[1])]
-if tag_filter != "All" and 'Теги' in filtered.columns:
-    filtered = filtered[filtered['Теги'].str.contains(tag_filter, case=False, na=False)]
-if search_query:
-    filtered = filtered[filtered['Название'].str.contains(search_query, case=False, na=False)]
 # Default sort: newest first by date
 if 'Date' in filtered.columns:
     filtered = filtered.sort_values('Date', ascending=False)
@@ -355,7 +335,7 @@ with top_col1:
     top_views = df.nlargest(10, 'Просмотры')[['Название', 'Просмотры', 'Лайки', 'Дата', 'Ссылка Dribbble']].reset_index(drop=True) if 'Ссылка Dribbble' in df.columns else df.nlargest(10, 'Просмотры')[['Название', 'Просмотры', 'Лайки', 'Дата']].reset_index(drop=True)
     top_views.index = top_views.index + 1
     if 'Ссылка Dribbble' in top_views.columns:
-        top_views['Название'] = top_views.apply(lambda r: f'<a href="{r["Ссылка"]}" target="_blank">{r["Название"]}</a>', axis=1)
+        top_views['Название'] = top_views.apply(lambda r: f'<a href="{r["Ссылка Dribbble"]}" target="_blank">{r["Название"]}</a>', axis=1)
         top_views = top_views.drop(columns=['Ссылка Dribbble'])
         st.markdown(top_views.to_html(escape=False, index=True), unsafe_allow_html=True)
     else:
@@ -366,7 +346,7 @@ with top_col2:
     top_likes = df.nlargest(10, 'Лайки')[['Название', 'Лайки', 'Просмотры', 'Дата', 'Ссылка Dribbble']].reset_index(drop=True) if 'Ссылка Dribbble' in df.columns else df.nlargest(10, 'Лайки')[['Название', 'Лайки', 'Просмотры', 'Дата']].reset_index(drop=True)
     top_likes.index = top_likes.index + 1
     if 'Ссылка Dribbble' in top_likes.columns:
-        top_likes['Название'] = top_likes.apply(lambda r: f'<a href="{r["Ссылка"]}" target="_blank">{r["Название"]}</a>', axis=1)
+        top_likes['Название'] = top_likes.apply(lambda r: f'<a href="{r["Ссылка Dribbble"]}" target="_blank">{r["Название"]}</a>', axis=1)
         top_likes = top_likes.drop(columns=['Ссылка Dribbble'])
         st.markdown(top_likes.to_html(escape=False, index=True), unsafe_allow_html=True)
     else:
@@ -459,9 +439,20 @@ if 'Теги' in df.columns:
                          font=dict(color="#636e72"), height=450, yaxis=dict(autorange="reversed"))
         st.plotly_chart(fig, use_container_width=True)
     
-    # Full tags table
-    st.markdown("**All tags**")
-    tags_display = tags_df.sort_values('Shots', ascending=False).reset_index(drop=True)
+    # Tag filter + search within this section
+    tag_f1, tag_f2 = st.columns(2)
+    with tag_f1:
+        tag_search = st.text_input("🔍 Search tag", "", key="tag_search")
+    with tag_f2:
+        min_shots_tag = st.number_input("Min shots", min_value=1, value=1, step=1, key="min_shots_tag")
+    
+    tags_display = tags_df.copy()
+    if tag_search:
+        tags_display = tags_display[tags_display['Tag'].str.contains(tag_search, case=False, na=False)]
+    tags_display = tags_display[tags_display['Shots'] >= min_shots_tag]
+    
+    st.markdown(f"**All tags** ({len(tags_display)})")
+    tags_display = tags_display.sort_values('Shots', ascending=False).reset_index(drop=True)
     tags_display.index = tags_display.index + 1
     st.dataframe(tags_display, use_container_width=True, height=400)
 
