@@ -139,8 +139,8 @@ if tag_input:
         volume = int(seo.get('Volume/mo', 0) or 0)
         cpc = float(seo.get('CPC ($)', 0) or 0)
     
-    # Fix CPC ×100 bug from Google Sheets
-    if cpc > 100:
+    # Fix CPC from Google Sheets (SEO Data sheet still has ×100 bug)
+    if seo and cpc > 100:
         cpc = cpc / 100
     
     # Live volume check if volume seems low or missing
