@@ -374,88 +374,63 @@ if tag_input:
     else:
         st.info("Немає даних про конкуренцію. Потрібен скан цього тегу на Dribbble.")
     
-    # --- SUGGESTED TAGS ---
+    # --- SUGGESTED TAGS (via DataForSEO Related Keywords API) ---
     st.divider()
-    st.markdown("### 💡 Рекомендовані теги (схожі)")
-    st.caption("Теги з бази keywords Dribbble, які пов'язані з вашим запитом і мають трафік")
+    st.markdown("### 💡 Рекомендовані теги")
+    st.caption("Семантично схожі keywords з Google — теги навколо тієї ж теми. Дані: DataForSEO Related Keywords API (~$0.01)")
     
-    # Broader search: match words from the tag, prioritize keywords with ALL words
-    if kw_partial.empty and not kw_df.empty:
-        words = [w for w in tag_space.split() if len(w) > 2]
-        mask = pd.Series([False] * len(kw_df))
-        for w in words:
-            mask = mask | kw_df['Keyword'].str.lower().str.contains(w, na=False)
-        kw_partial = kw_df[mask]
-    
-    if not kw_partial.empty:
-        related = kw_partial[
-            (kw_partial['Keyword'].str.lower() != tag) & 
-            (kw_partial['Keyword'].str.lower() != tag_hyphen) &
-            (kw_partial['Keyword'].str.lower() != tag_space)
-        ].copy()
-        
-        # Score: how many input words appear in each keyword (more = more relevant)
-        words = [w for w in tag_space.split() if len(w) > 2]
-        related['_relevance'] = related['Keyword'].str.lower().apply(
-            lambda k: sum(1 for w in words if w in k)
+    import requests as req_rel
+    try:
+        rel_payload = [{
+            "keyword": tag_space,
+            "language_code": "en",
+            "location_code": 2840,
+            "limit": 30,
+            "filters": ["keyword_data.keyword_info.search_volume", ">", 10]
+        }]
+        rel_resp = req_rel.post(
+            "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
+            json=rel_payload,
+            headers={"Authorization": "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll"},
+            timeout=20
         )
-        related = related.sort_values(['_relevance', 'Est. Traffic/mo'], ascending=[False, False]).head(20)
-        related = related.drop(columns=['_relevance'])
-        if not related.empty:
-            st.dataframe(
-                related[['Keyword', 'Volume/mo', 'Google Pos', 'Est. Traffic/mo', 'CPC ($)', 'Tag Page', 'Landing URL']],
-                column_config={
-                    "Keyword": st.column_config.TextColumn("🏷️ Keyword"),
-                    "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", format="%d"),
-                    "Google Pos": st.column_config.NumberColumn("🔍 Google #", format="%d"),
-                    "Est. Traffic/mo": st.column_config.NumberColumn("🚀 Traffic", format="%d"),
-                    "CPC ($)": st.column_config.TextColumn("💰 CPC"),
-                    "Tag Page": st.column_config.TextColumn("Tag"),
-                    "Landing URL": st.column_config.LinkColumn("🔗 Link", display_text="Open →"),
-                },
-                use_container_width=True, hide_index=True
-            )
+        rel_result = rel_resp.json()
+        rel_items = rel_result.get('tasks', [{}])[0].get('result', [{}])[0].get('items', [])
+        
+        if rel_items:
+            rel_rows = []
+            for ri in rel_items:
+                kd = ri.get('keyword_data', {})
+                ki = kd.get('keyword_info', {})
+                kw_name = kd.get('keyword', '')
+                if kw_name.lower() in (tag, tag_hyphen, tag_space):
+                    continue
+                vol_r = ki.get('search_volume', 0) or 0
+                cpc_r = ki.get('cpc', 0) or 0
+                rel_rows.append({
+                    'Keyword': kw_name,
+                    'Volume/mo': vol_r,
+                    'CPC ($)': f"${cpc_r:.2f}",
+                    'Competition': ki.get('competition_level', ''),
+                })
+            if rel_rows:
+                rel_df = pd.DataFrame(rel_rows).sort_values('Volume/mo', ascending=False)
+                st.dataframe(
+                    rel_df,
+                    column_config={
+                        "Keyword": st.column_config.TextColumn("🏷️ Keyword", width="large"),
+                        "Volume/mo": st.column_config.NumberColumn("📈 Vol/mo", format="%d"),
+                        "CPC ($)": st.column_config.TextColumn("💰 CPC"),
+                        "Competition": st.column_config.TextColumn("⚔️ Competition"),
+                    },
+                    use_container_width=True, hide_index=True
+                )
+            else:
+                st.info("Немає схожих keywords")
         else:
-            st.info("Схожих тегів не знайдено")
-    else:
-        st.info("Немає даних в кешованій базі")
-        if st.button("🔍 Знайти схожі теги через API", key="fetch_related"):
-            import requests as req_rel
-            with st.spinner("Шукаю схожі keywords через DataForSEO..."):
-                try:
-                    rel_payload = [{
-                        "keyword": tag_space,
-                        "language_code": "en",
-                        "location_code": 2840,
-                        "limit": 30,
-                        "filters": ["keyword_data.keyword_info.search_volume", ">", 10]
-                    }]
-                    rel_resp = req_rel.post(
-                        "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
-                        json=rel_payload,
-                        headers={"Authorization": "Basic aGVsbG9AdmFsbWF4LmFnZW5jeTo1NTUyMWMyNjViOTczMzll"},
-                        timeout=20
-                    )
-                    rel_result = rel_resp.json()
-                    rel_items = rel_result.get('tasks', [{}])[0].get('result', [{}])[0].get('items', [])
-                    
-                    if rel_items:
-                        rel_rows = []
-                        for ri in rel_items:
-                            kd = ri.get('keyword_data', {})
-                            ki = kd.get('keyword_info', {})
-                            rel_rows.append({
-                                'Keyword': kd.get('keyword', ''),
-                                'Volume/mo': ki.get('search_volume', 0) or 0,
-                                'CPC ($)': f"${ki.get('cpc', 0) or 0:.2f}",
-                            })
-                        rel_df = pd.DataFrame(rel_rows).sort_values('Volume/mo', ascending=False)
-                        st.dataframe(rel_df, use_container_width=True, hide_index=True)
-                        st.caption("💰 Live дані з DataForSEO Related Keywords API (~$0.01)")
-                    else:
-                        st.warning("API не знайшов схожих keywords")
-                except Exception as e:
-                    st.error(f"Помилка API: {e}")
+            st.info("API не знайшов схожих keywords для цього запиту")
+    except Exception as e:
+        st.warning(f"⚠️ Related Keywords API недоступний: {e}")
 
 # --- FULL KEYWORDS TABLE ---
 st.divider()
