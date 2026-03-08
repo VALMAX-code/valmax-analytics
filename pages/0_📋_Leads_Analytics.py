@@ -271,26 +271,43 @@ with col4:
 
 # --- FUNNEL ---
 st.divider()
-st.markdown("### 🔻 Конверсійна воронка")
+st.markdown("### 🔻 Conversion Funnel")
 
-funnel_data = {
-    "Stage": ["All leads", "VALMAX replied", "Lead replied", "Meeting", "Won"],
-    "Count": [
-        len(filtered),
-        len(filtered[filtered.get("VALMAX ответил?", pd.Series()) == "Да"]) if "VALMAX ответил?" in filtered.columns else 0,
-        len(filtered[filtered.get("Лид ответил?", pd.Series()) == "Да"]) if "Лид ответил?" in filtered.columns else 0,
-        meetings,
-        won,
-    ]
-}
-fig = go.Figure(go.Funnel(
-    y=funnel_data["Stage"],
-    x=funnel_data["Count"],
-    textinfo="value+percent initial",
-    marker=dict(color=["#667eea", "#764ba2", "#f093fb", "#f5576c", "#43e97b"]),
-))
-fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
-                 plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=350)
+funnel_stages = ["All leads", "VALMAX replied", "Lead replied", "Meeting", "Won"]
+funnel_counts = [
+    len(filtered),
+    len(filtered[filtered.get("VALMAX ответил?", pd.Series()) == "Да"]) if "VALMAX ответил?" in filtered.columns else 0,
+    len(filtered[filtered.get("Лид ответил?", pd.Series()) == "Да"]) if "Лид ответил?" in filtered.columns else 0,
+    meetings,
+    won,
+]
+funnel_colors = ["#667eea", "#818cf8", "#a78bfa", "#c084fc", "#43e97b"]
+total = funnel_counts[0] if funnel_counts[0] > 0 else 1
+
+# Custom visual funnel with metric cards
+funnel_cols = st.columns(5)
+for i, (stage, count, color) in enumerate(zip(funnel_stages, funnel_counts, funnel_colors)):
+    pct = round(count / total * 100)
+    arrow = f" → {pct}%" if i > 0 else ""
+    with funnel_cols[i]:
+        st.markdown(f"""
+        <div style="text-align:center; padding:16px 8px; background:linear-gradient(135deg, {color}22, {color}11); 
+                    border-left:4px solid {color}; border-radius:12px; margin-bottom:8px;">
+            <div style="font-size:28px; font-weight:800; color:{color};">{count}</div>
+            <div style="font-size:13px; color:#636e72; font-weight:600;">{stage}</div>
+            <div style="font-size:12px; color:#b2bec3;">{pct}% of total</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# Conversion between stages
+if len(funnel_counts) >= 5:
+    drop_text = []
+    for i in range(1, len(funnel_counts)):
+        prev = funnel_counts[i-1]
+        curr = funnel_counts[i]
+        conv = round(curr / prev * 100) if prev > 0 else 0
+        drop_text.append(f"**{funnel_stages[i-1]}** → **{funnel_stages[i]}**: {conv}%")
+    st.caption(" · ".join(drop_text))
 st.plotly_chart(fig, use_container_width=True)
 
 # --- MANAGERS ---
