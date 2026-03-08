@@ -190,8 +190,17 @@ fc6.metric("Avg Engagement", f"{avg_eng:.2f}%")
 st.divider()
 st.markdown("### 📈 Динаміка по місяцях")
 
+_ru_to_en_m = {'Январь':'January','Февраль':'February','Март':'March','Апрель':'April',
+               'Май':'May','Июнь':'June','Июль':'July','Август':'August',
+               'Сентябрь':'September','Октябрь':'October','Ноябрь':'November','Декабрь':'December'}
+
+def _to_en_month(m):
+    parts = str(m).split()
+    if len(parts) == 2 and parts[0] in _ru_to_en_m:
+        return f"{_ru_to_en_m[parts[0]]} {parts[1]}"
+    return m
+
 if monthly:
-    # Create monthly dataframe
     month_order = {'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
                    'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
     
@@ -201,24 +210,23 @@ if monthly:
         if len(parts) == 2:
             sort_key = int(parts[1]) * 100 + month_order.get(parts[0], 0)
             mdf_rows.append({
-                'Месяц': m, 'sort': sort_key,
-                'Шотов': d['shots'], 'Просмотры': d['views'], 
-                'Лайки': d['likes'], 'Сохранения': d['saves'], 'Комментарии': d['comments'],
+                'Month': _to_en_month(m), 'sort': sort_key,
+                'Shots': d['shots'], 'Views': d['views'], 
+                'Likes': d['likes'], 'Saves': d['saves'], 'Comments': d['comments'],
                 'Avg Views/Shot': round(d['views'] / d['shots']) if d['shots'] > 0 else 0,
                 'Avg Likes/Shot': round(d['likes'] / d['shots']) if d['shots'] > 0 else 0,
             })
     
     mdf = pd.DataFrame(mdf_rows).sort_values('sort')
-    # Take last 12 months
     mdf_recent = mdf.tail(12)
     
-    tab1, tab2, tab3, tab4 = st.tabs(["Перегляди", "Лайки", "Шотів/міс", "Avg Views/Shot"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Views", "Likes", "Shots/month", "Avg Views/Shot"])
     
     with tab1:
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Просмотры'], name='Перегляди',
+        fig.add_trace(go.Bar(x=mdf_recent['Month'], y=mdf_recent['Views'], name='Views',
                             marker_color='#667eea'))
-        fig.add_trace(go.Scatter(x=mdf_recent['Месяц'], y=mdf_recent['Просмотры'], name='Тренд',
+        fig.add_trace(go.Scatter(x=mdf_recent['Month'], y=mdf_recent['Views'], name='Trend',
                                 line=dict(color='#43e97b', width=2), mode='lines+markers'))
         fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", 
                          plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=400)
@@ -226,15 +234,15 @@ if monthly:
     
     with tab2:
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Лайки'], name='Лайки', marker_color='#f093fb'))
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Сохранения'], name='Збереження', marker_color='#feca57'))
-        fig.add_trace(go.Bar(x=mdf_recent['Месяц'], y=mdf_recent['Комментарии'], name='Коментарі', marker_color='#43e97b'))
+        fig.add_trace(go.Bar(x=mdf_recent['Month'], y=mdf_recent['Likes'], name='Likes', marker_color='#f093fb'))
+        fig.add_trace(go.Bar(x=mdf_recent['Month'], y=mdf_recent['Saves'], name='Saves', marker_color='#feca57'))
+        fig.add_trace(go.Bar(x=mdf_recent['Month'], y=mdf_recent['Comments'], name='Comments', marker_color='#43e97b'))
         fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
                          plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#636e72"), height=400, barmode='group')
         st.plotly_chart(fig, use_container_width=True)
     
     with tab3:
-        fig = px.bar(mdf_recent, x='Месяц', y='Шотов', template="plotly_white",
+        fig = px.bar(mdf_recent, x='Month', y='Shots', template="plotly_white",
                      color_discrete_sequence=['#667eea'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=400)
@@ -242,10 +250,10 @@ if monthly:
     
     with tab4:
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=mdf_recent['Месяц'], y=mdf_recent['Avg Views/Shot'],
+        fig.add_trace(go.Scatter(x=mdf_recent['Month'], y=mdf_recent['Avg Views/Shot'],
                                 mode='lines+markers', name='Avg Views/Shot',
                                 line=dict(color='#667eea', width=3), marker=dict(size=10)))
-        fig.add_trace(go.Scatter(x=mdf_recent['Месяц'], y=mdf_recent['Avg Likes/Shot'],
+        fig.add_trace(go.Scatter(x=mdf_recent['Month'], y=mdf_recent['Avg Likes/Shot'],
                                 mode='lines+markers', name='Avg Likes/Shot',
                                 line=dict(color='#f093fb', width=3), marker=dict(size=10), yaxis='y2'))
         fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
@@ -253,25 +261,58 @@ if monthly:
                          yaxis2=dict(title='Avg Likes/Shot', overlaying='y', side='right', showgrid=False))
         st.plotly_chart(fig, use_container_width=True)
 
-    # Month-over-month growth
-    st.markdown("### 📊 Зростання місяць-до-місяця")
-    if len(mdf_recent) >= 2:
-        growth_rows = []
-        for i in range(1, len(mdf_recent)):
-            prev = mdf_recent.iloc[i-1]
-            curr = mdf_recent.iloc[i]
-            views_growth = ((curr['Просмотры'] - prev['Просмотры']) / prev['Просмотры'] * 100) if prev['Просмотры'] > 0 else 0
-            likes_growth = ((curr['Лайки'] - prev['Лайки']) / prev['Лайки'] * 100) if prev['Лайки'] > 0 else 0
-            growth_rows.append({
-                'Месяц': curr['Месяц'],
-                'Views Δ%': f"{views_growth:+.1f}%",
-                'Likes Δ%': f"{likes_growth:+.1f}%",
-                'Шотов': curr['Шотов'],
-                'Просмотры': f"{curr['Просмотры']:,}",
-                'Лайки': f"{curr['Лайки']:,}",
-            })
-        growth_df = pd.DataFrame(growth_rows)
-        st.dataframe(growth_df, use_container_width=True, hide_index=True)
+    # Growth comparison: monthly + weekly toggle
+    st.markdown("### 📊 Growth comparison")
+    growth_mode = st.radio("Compare by:", ["Month vs previous month", "Week vs previous week"], horizontal=True)
+    
+    if growth_mode == "Month vs previous month":
+        if len(mdf_recent) >= 2:
+            growth_rows = []
+            mdf_desc = mdf_recent.iloc[::-1]  # newest first
+            for i in range(len(mdf_desc) - 1):
+                curr = mdf_desc.iloc[i]
+                prev = mdf_desc.iloc[i + 1]
+                views_g = ((curr['Views'] - prev['Views']) / prev['Views'] * 100) if prev['Views'] > 0 else 0
+                likes_g = ((curr['Likes'] - prev['Likes']) / prev['Likes'] * 100) if prev['Likes'] > 0 else 0
+                growth_rows.append({
+                    'Month': curr['Month'],
+                    'vs': prev['Month'],
+                    'Views Δ%': f"{views_g:+.1f}%",
+                    'Likes Δ%': f"{likes_g:+.1f}%",
+                    'Shots': curr['Shots'],
+                    'Views': f"{curr['Views']:,}",
+                    'Likes': f"{curr['Likes']:,}",
+                })
+            st.dataframe(pd.DataFrame(growth_rows), use_container_width=True, hide_index=True)
+    else:
+        # Week-over-week from raw shot data
+        if 'Date' in df.columns and 'Year_Week' in df.columns:
+            weekly = df.groupby('Year_Week').agg({
+                'Просмотры': 'sum', 'Лайки': 'sum', 'Сохранения': 'sum',
+                'Комментарии': 'sum', 'Название': 'count'
+            }).rename(columns={'Название': 'Shots', 'Просмотры': 'Views', 
+                              'Лайки': 'Likes', 'Сохранения': 'Saves', 'Комментарии': 'Comments'})
+            weekly = weekly.sort_index()
+            
+            wg_rows = []
+            weeks_list = weekly.index.tolist()
+            for i in range(len(weeks_list) - 1, 0, -1):
+                curr_w = weeks_list[i]
+                prev_w = weeks_list[i - 1]
+                c = weekly.loc[curr_w]
+                p = weekly.loc[prev_w]
+                vg = ((c['Views'] - p['Views']) / p['Views'] * 100) if p['Views'] > 0 else 0
+                lg = ((c['Likes'] - p['Likes']) / p['Likes'] * 100) if p['Likes'] > 0 else 0
+                wg_rows.append({
+                    'Week': curr_w,
+                    'vs': prev_w,
+                    'Views Δ%': f"{vg:+.1f}%",
+                    'Likes Δ%': f"{lg:+.1f}%",
+                    'Shots': int(c['Shots']),
+                    'Views': f"{int(c['Views']):,}",
+                    'Likes': f"{int(c['Likes']):,}",
+                })
+            st.dataframe(pd.DataFrame(wg_rows[:20]), use_container_width=True, hide_index=True)
 
 # --- TOP SHOTS ---
 st.divider()
@@ -280,13 +321,13 @@ st.markdown("### 🏆 Топ шоти")
 top_col1, top_col2 = st.columns(2)
 
 with top_col1:
-    st.markdown("**По просмотрам (All-time)**")
+    st.markdown("**By views (All-time)**")
     top_views = df.nlargest(10, 'Просмотры')[['Название', 'Просмотры', 'Лайки', 'Дата']].reset_index(drop=True)
     top_views.index = top_views.index + 1
     st.dataframe(top_views, use_container_width=True)
 
 with top_col2:
-    st.markdown("**По лайкам (All-time)**")
+    st.markdown("**By likes (All-time)**")
     top_likes = df.nlargest(10, 'Лайки')[['Название', 'Лайки', 'Просмотры', 'Дата']].reset_index(drop=True)
     top_likes.index = top_likes.index + 1
     st.dataframe(top_likes, use_container_width=True)
@@ -298,13 +339,12 @@ st.markdown("### 🎯 Engagement аналіз")
 eng_col1, eng_col2 = st.columns(2)
 
 with eng_col1:
-    st.markdown("**Engagement Rate по месяцам**")
+    st.markdown("**Engagement Rate by month**")
     if 'Date' in df.columns:
         monthly_eng = df.groupby('Месяц').agg({
             'Engagement': 'mean',
             'Просмотры': 'sum'
         }).reset_index()
-        # Sort
         def month_sort(m):
             mo = {'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
                   'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
@@ -313,15 +353,16 @@ with eng_col1:
         
         monthly_eng['sort'] = monthly_eng['Месяц'].apply(month_sort)
         monthly_eng = monthly_eng.sort_values('sort').tail(12)
+        monthly_eng['Month'] = monthly_eng['Месяц'].apply(_to_en_month)
         
-        fig = px.line(monthly_eng, x='Месяц', y='Engagement', template="plotly_white",
+        fig = px.line(monthly_eng, x='Month', y='Engagement', template="plotly_white",
                      markers=True, color_discrete_sequence=['#43e97b'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=350, yaxis_title="Engagement %")
         st.plotly_chart(fig, use_container_width=True)
 
 with eng_col2:
-    st.markdown("**Просмотры vs Engagement (scatter)**")
+    st.markdown("**Views vs Engagement (scatter)**")
     if 'Engagement' in df.columns:
         fig = px.scatter(df, x='Просмотры', y='Engagement', hover_name='Название',
                         size='Лайки', template="plotly_white",
