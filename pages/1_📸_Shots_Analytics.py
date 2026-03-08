@@ -69,7 +69,12 @@ def load_data():
         df['Year'] = df['Date'].dt.year
         df['Month_num'] = df['Date'].dt.month
         df['Week'] = df['Date'].dt.isocalendar().week.astype(int)
-        df['Year_Week'] = df['Date'].dt.strftime('%Y-W%W')
+        # Week label as date range: "Feb 24 – Mar 2"
+        week_start = df['Date'] - pd.to_timedelta(df['Date'].dt.weekday, unit='d')
+        week_end = week_start + pd.Timedelta(days=6)
+        df['Week_Start'] = week_start
+        df['Year_Week'] = week_start.dt.strftime('%Y-W%W')
+        df['Week_Label'] = week_start.dt.strftime('%b %d') + ' – ' + week_end.dt.strftime('%b %d, %Y')
     
     # Profile stats (from M column area)
     profile = {}
@@ -287,6 +292,9 @@ if monthly:
     else:
         # Week-over-week from raw shot data
         if 'Date' in df.columns and 'Year_Week' in df.columns:
+            # Build week label mapping
+            wk_labels = df.groupby('Year_Week')['Week_Label'].first()
+            
             weekly = df.groupby('Year_Week').agg({
                 'Просмотры': 'sum', 'Лайки': 'sum', 'Сохранения': 'sum',
                 'Комментарии': 'sum', 'Название': 'count'
@@ -304,8 +312,8 @@ if monthly:
                 vg = ((c['Views'] - p['Views']) / p['Views'] * 100) if p['Views'] > 0 else 0
                 lg = ((c['Likes'] - p['Likes']) / p['Likes'] * 100) if p['Likes'] > 0 else 0
                 wg_rows.append({
-                    'Week': curr_w,
-                    'vs': prev_w,
+                    'Week': wk_labels.get(curr_w, curr_w),
+                    'vs': wk_labels.get(prev_w, prev_w),
                     'Views Δ%': f"{vg:+.1f}%",
                     'Likes Δ%': f"{lg:+.1f}%",
                     'Shots': int(c['Shots']),
