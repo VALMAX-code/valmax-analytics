@@ -410,7 +410,7 @@ if 'Теги' in df.columns:
     tag_col1, tag_col2 = st.columns(2)
     
     with tag_col1:
-        st.markdown("**Самые используемые теги**")
+        st.markdown("**Найуживаніші теги**")
         top_used = tags_df.nlargest(15, 'Shots')
         fig = px.bar(top_used, x='Shots', y='Tag', orientation='h', template="plotly_white",
                      color_discrete_sequence=['#667eea'])
@@ -419,7 +419,7 @@ if 'Теги' in df.columns:
         st.plotly_chart(fig, use_container_width=True)
     
     with tag_col2:
-        st.markdown("**Теги с лучшим Avg Views/Shot** (мин. 3 шота)")
+        st.markdown("**Теги з найкращим Avg Views/Shot** (мін. 3 шоти)")
         best_tags = tags_df[tags_df['Shots'] >= 3].nlargest(15, 'Avg Views/Shot')
         fig = px.bar(best_tags, x='Avg Views/Shot', y='Tag', orientation='h', template="plotly_white",
                      color_discrete_sequence=['#43e97b'])
