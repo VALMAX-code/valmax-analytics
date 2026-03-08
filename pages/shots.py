@@ -7,8 +7,6 @@ import numpy as np
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
-st.set_page_config(page_title="VALMAX Shots Analytics", page_icon="📸", layout="wide")
-
 # --- Multi-page nav ---
 st.sidebar.markdown("## 🧭 Навигация")
 st.sidebar.markdown("[📋 Leads Analytics](/)")
