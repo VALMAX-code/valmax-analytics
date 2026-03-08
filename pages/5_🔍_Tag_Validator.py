@@ -469,52 +469,69 @@ if tag_input:
                 all_tags = ", ".join(rel_df['Tag'].tolist())
                 st.text_area("📋 Копіювати всі теги:", all_tags, height=80)
                 
-                # --- RELATED THEMES ---
+                # --- RELATED THEMES from our 297K keywords DB ---
                 st.divider()
-                st.markdown("### 🎯 Схожі тематики для Dribbble")
-                st.caption("Ширші теми навколо вашого запиту — для розширення охоплення шотів")
+                st.markdown("### 🎯 Схожі тематики на Dribbble")
+                st.caption("Tag pages з нашої бази 297K keywords, згруповані по тематиках. Кожна тема — реальні Dribbble теги з Google трафіком.")
                 
-                # Group related keywords into themes
-                theme_keywords = {
-                    'Banking & Finance': ['bank', 'finance', 'financial', 'banking', 'payment', 'money', 'invest', 'trading', 'stock', 'wallet', 'credit', 'loan'],
-                    'Fintech & Crypto': ['fintech', 'crypto', 'blockchain', 'defi', 'nft', 'web3', 'token', 'bitcoin', 'ethereum'],
-                    'SaaS & Dashboard': ['saas', 'dashboard', 'analytics', 'admin', 'panel', 'crm', 'erp', 'metrics', 'reporting'],
-                    'E-commerce': ['ecommerce', 'e-commerce', 'shop', 'store', 'marketplace', 'cart', 'checkout', 'product'],
-                    'Healthcare': ['health', 'medical', 'clinic', 'hospital', 'telemedicine', 'wellness', 'fitness', 'pharma'],
-                    'Education': ['education', 'learning', 'course', 'school', 'university', 'edtech', 'lms', 'tutorial'],
-                    'Real Estate': ['real estate', 'property', 'housing', 'apartment', 'rental', 'mortgage', 'realty'],
-                    'Travel & Booking': ['travel', 'booking', 'hotel', 'flight', 'tourism', 'vacation', 'trip'],
-                    'Food & Delivery': ['food', 'restaurant', 'delivery', 'recipe', 'menu', 'cooking', 'grocery'],
-                    'AI & Tech': ['ai', 'artificial intelligence', 'machine learning', 'automation', 'chatbot', 'robot'],
-                    'Mobile App': ['mobile', 'app', 'ios', 'android', 'smartphone', 'tablet'],
-                    'Branding & Identity': ['brand', 'logo', 'identity', 'branding', 'visual', 'corporate'],
-                }
-                
-                # Find which themes match the input and related keywords
-                all_kw_text = ' '.join([tag_space] + [r['Tag'] for r in rel_rows]).lower()
-                matched_themes = []
-                for theme, keywords in theme_keywords.items():
-                    matches = [k for k in keywords if k in all_kw_text]
-                    if matches:
-                        # Build suggested Dribbble tags for this theme
-                        theme_tags = [f"{tag_space} {k}" for k in keywords[:5] if k not in tag_space]
-                        matched_themes.append({
-                            'theme': theme,
-                            'match_count': len(matches),
-                            'matched': ', '.join(matches),
-                            'suggested_tags': theme_tags[:4]
-                        })
-                
-                matched_themes.sort(key=lambda x: -x['match_count'])
-                
-                if matched_themes:
-                    for t in matched_themes:
-                        st.markdown(f"**{t['theme']}** ({t['match_count']} збігів: {t['matched']})")
-                        tag_suggestions = ' · '.join([f'`{s}`' for s in t['suggested_tags']])
-                        if tag_suggestions:
-                            st.markdown(f"  Теги для шотів: {tag_suggestions}")
+                if not kw_df.empty:
+                    # Find tag pages that share words with the input
+                    input_words = [w for w in tag_space.split() if len(w) > 2]
+                    
+                    # For each input word, find top tag pages
+                    theme_data = {}
+                    for word in input_words:
+                        matches = kw_df[kw_df['Tag Page'].str.lower().str.contains(word, na=False)]
+                        if not matches.empty:
+                            # Group by Tag Page
+                            for tp in matches['Tag Page'].unique():
+                                if tp not in theme_data:
+                                    tp_rows = matches[matches['Tag Page'] == tp]
+                                    best = tp_rows.sort_values('Est. Traffic/mo', ascending=False).iloc[0]
+                                    theme_data[tp] = {
+                                        'tag_page': tp,
+                                        'top_keyword': best.get('Keyword', ''),
+                                        'volume': int(best.get('Volume/mo', 0) or 0),
+                                        'traffic': int(best.get('Est. Traffic/mo', 0) or 0),
+                                        'position': int(best.get('Google Pos', 0) or 0),
+                                    }
+                    
+                    if theme_data:
+                        # Sort by traffic and show top themes
+                        sorted_themes = sorted(theme_data.values(), key=lambda x: -x['traffic'])[:15]
+                        
+                        html_themes = """
+                        <style>
+                        .theme-table { width:100%; border-collapse:collapse; font-family:sans-serif; font-size:13px; }
+                        .theme-table th { background:#764ba2; color:white; padding:6px 10px; text-align:left; }
+                        .theme-table td { padding:5px 10px; border-bottom:1px solid #eee; }
+                        .theme-table tr:hover { background:#f5f0ff; }
+                        .cp2 { background:none; border:1px solid #ddd; border-radius:4px; cursor:pointer; padding:1px 5px; font-size:11px; }
+                        .cp2:hover { background:#764ba2; color:white; }
+                        </style>
+                        <script>function cp2(t,b){navigator.clipboard.writeText(t);b.textContent='✅';setTimeout(()=>b.textContent='📋',800);}</script>
+                        <table class="theme-table">
+                        <tr><th>📋</th><th>🏷️ Dribbble Tag</th><th>🔑 Top Keyword</th><th>📈 Vol</th><th>🚀 Traffic</th><th>🔍 Pos</th></tr>
+                        """
+                        for t in sorted_themes:
+                            tp_escaped = t['tag_page'].replace("'", "\\'")
+                            html_themes += f"""<tr>
+                                <td><button class="cp2" onclick="cp2('{tp_escaped}',this)">📋</button></td>
+                                <td><b>{t['tag_page']}</b></td>
+                                <td>{t['top_keyword']}</td>
+                                <td>{t['volume']:,}</td>
+                                <td>{t['traffic']:,}</td>
+                                <td>#{t['position']}</td>
+                            </tr>"""
+                        html_themes += "</table>"
+                        st.components.v1.html(html_themes, height=min(500, 40 + len(sorted_themes)*32), scrolling=True)
+                        
+                        all_theme_tags = ", ".join([t['tag_page'] for t in sorted_themes])
+                        st.text_area("📋 Копіювати всі теги тематик:", all_theme_tags, height=60)
+                    else:
+                        st.info("Не знайдено схожих тематик в базі")
                 else:
-                    st.info("Не вдалося визначити тематику")
+                    st.info("База keywords не завантажена")
             else:
                 st.info("Немає схожих keywords")
         else:
