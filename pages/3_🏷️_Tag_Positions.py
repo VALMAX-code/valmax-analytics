@@ -215,7 +215,7 @@ if len(first_places) > 0:
             "Tag": st.column_config.TextColumn("Tag", width="medium"),
             "Shot Name": st.column_config.TextColumn("Shot", width="large"),
             "Views": st.column_config.TextColumn("Views", width="small"),
-            "Total on Page": st.column_config.NumberColumn("Total Shots", width="small"),
+            "Total on Page": st.column_config.NumberColumn("Competitors", help="Скільки всього шотів у видачі цього тегу (конкуренція)", width="small"),
         },
         use_container_width=True, hide_index=True
     )
