@@ -199,65 +199,10 @@ if not pop_df.empty:
 else:
     st.info("No Popular data yet. Run the Popular checker first.")
 
-# --- FILTERS ---
-st.divider()
-st.markdown("#### 🔍 Фільтри")
-col_f1, col_f3 = st.columns([1, 1])
-
-# Month filter with English month names, sorted newest first
-if "Месяц" in df.columns:
-    ru_to_en = {'Январь':'January','Февраль':'February','Март':'March','Апрель':'April',
-                'Май':'May','Июнь':'June','Июль':'July','Август':'August',
-                'Сентябрь':'September','Октябрь':'October','Ноябрь':'November','Декабрь':'December'}
-    month_num = {'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,
-                 'July':7,'August':8,'September':9,'October':10,'November':11,'December':12}
-    
-    # Build English month labels
-    en_months_set = set()
-    month_map = {}  # en_label -> original value
-    for m in df["Месяц"].unique():
-        parts = str(m).split()
-        if len(parts) == 2 and parts[0] in ru_to_en:
-            en_label = f"{ru_to_en[parts[0]]} {parts[1]}"
-            en_months_set.add(en_label)
-            month_map[en_label] = m
-    
-    sorted_en_months = sorted(en_months_set, 
-        key=lambda x: int(x.split()[1])*100 + month_num.get(x.split()[0], 0), reverse=True)
-    months_available = ["All"] + sorted_en_months
-else:
-    months_available = ["All"]
-    month_map = {}
-
-with col_f1:
-    month_filter = st.selectbox("📅 Month", months_available)
-
-# Views range
-with col_f3:
-    max_views_val = int(df['Просмотры'].max()) if len(df) > 0 else 100000
-    views_range = st.slider("👁️ Views range", min_value=0, max_value=max_views_val, 
-                            value=(0, max_views_val), step=1000)
-
-# Apply filters
+# filtered = all data sorted by date
 filtered = df.copy()
-if month_filter != "All":
-    original_month = month_map.get(month_filter, month_filter)
-    filtered = filtered[filtered["Месяц"] == original_month]
-filtered = filtered[(filtered['Просмотры'] >= views_range[0]) & (filtered['Просмотры'] <= views_range[1])]
-# Default sort: newest first by date
 if 'Date' in filtered.columns:
     filtered = filtered.sort_values('Date', ascending=False)
-
-# Filtered metrics
-st.divider()
-fc1, fc2, fc3, fc4, fc5, fc6 = st.columns(6)
-fc1.metric("Шотів", len(filtered))
-fc2.metric("Перегляди", f"{filtered['Просмотры'].sum():,}")
-fc3.metric("Лайки", f"{filtered['Лайки'].sum():,}")
-fc4.metric("Збереження", f"{filtered['Сохранения'].sum():,}")
-fc5.metric("Коментарі", f"{filtered['Комментарии'].sum():,}")
-avg_eng = filtered['Engagement'].mean() if 'Engagement' in filtered.columns and len(filtered) > 0 else 0
-fc6.metric("Avg Engagement", f"{avg_eng:.2f}%")
 
 # --- MONTHLY DYNAMICS ---
 st.divider()
