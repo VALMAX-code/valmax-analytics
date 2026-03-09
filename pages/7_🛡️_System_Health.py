@@ -23,7 +23,7 @@ st.caption("Автоматична перевірка даних, правила
 @st.cache_data(ttl=120)
 def run_health_check():
     creds = Credentials.from_service_account_info(
-        json.loads(st.secrets["gcp_service_account"]),
+        dict(st.secrets["gcp_service_account"]),
         scopes=["https://www.googleapis.com/auth/spreadsheets"]
     )
     gc = gspread.authorize(creds)
