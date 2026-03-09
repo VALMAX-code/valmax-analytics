@@ -34,7 +34,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- DATA ---
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def load_data():
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=[
@@ -132,7 +132,7 @@ st.divider()
 st.markdown("### ⭐ Popular Tracker")
 st.caption("Чи потрапляють шоти VALMAX у Dribbble Popular? Перевірка 15 категорій × top 96 шотів. Timeframes: All Time / Week / Month")
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def load_popular():
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
