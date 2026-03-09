@@ -372,10 +372,16 @@ eng_col1, eng_col2 = st.columns(2)
 with eng_col1:
     st.markdown("**Engagement Rate by month**")
     if 'Date' in df.columns:
+        eng_col_name = 'Engagement%' if 'Engagement%' in df.columns else 'Engagement'
+        view_col_name = 'Просмотры' if 'Просмотры' in df.columns else 'Views'
+        if eng_col_name in df.columns and view_col_name in df.columns:
+            df[eng_col_name] = pd.to_numeric(df[eng_col_name], errors='coerce')
+            df[view_col_name] = pd.to_numeric(df[view_col_name].astype(str).str.replace(',', ''), errors='coerce')
         monthly_eng = df.groupby('Месяц').agg({
-            'Engagement': 'mean',
-            'Просмотры': 'sum'
+            eng_col_name: 'mean',
+            view_col_name: 'sum'
         }).reset_index()
+        monthly_eng = monthly_eng.rename(columns={eng_col_name: 'Engagement', view_col_name: 'Просмотры'})
         def month_sort(m):
             mo = {'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
                   'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
