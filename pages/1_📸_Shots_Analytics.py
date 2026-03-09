@@ -59,9 +59,13 @@ def load_data():
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
     
-    # Parse engagement
+    # Parse engagement (handle multiple column name formats)
     if 'Engagement %' in df.columns:
-        df['Engagement'] = df['Engagement %'].str.replace('%', '').astype(float)
+        df['Engagement'] = pd.to_numeric(df['Engagement %'].astype(str).str.replace('%', ''), errors='coerce').fillna(0)
+    elif 'Engagement%' in df.columns:
+        df['Engagement'] = pd.to_numeric(df['Engagement%'].astype(str).str.replace('%', ''), errors='coerce').fillna(0)
+    elif 'Engagement' not in df.columns:
+        df['Engagement'] = 0.0
     
     # Parse dates
     if 'Дата' in df.columns:
@@ -538,11 +542,12 @@ if 'Название' in df.columns:
         st.plotly_chart(fig, use_container_width=True)
     
     with type_col2:
-        type_perf = df.groupby('Тип проекта').agg({
-            'Просмотры': 'mean', 'Лайки': 'mean', 'Engagement': 'mean'
-        }).round(0).reset_index()
-        type_perf.columns = ['Type', 'Avg Views', 'Avg Likes', 'Avg Engagement']
-        fig = px.bar(type_perf, x='Type', y='Avg Views', template="plotly_white",
+        agg_cols = {c: 'mean' for c in ['Просмотры', 'Лайки', 'Engagement'] if c in df.columns}
+        type_perf = df.groupby('Тип проекта').agg(agg_cols).round(0).reset_index()
+        type_perf.columns = ['Type'] + [f'Avg {c}' for c in agg_cols.keys()]
+        if 'Avg Engagement' not in type_perf.columns:
+            type_perf['Avg Engagement'] = 0
+        fig = px.bar(type_perf, x='Type', y=type_perf.columns[1] if len(type_perf.columns) > 1 else 'Type', template="plotly_white",
                      color='Avg Engagement', color_continuous_scale=['#f5576c', '#00d4aa'])
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                          font=dict(color="#636e72"), height=350)
