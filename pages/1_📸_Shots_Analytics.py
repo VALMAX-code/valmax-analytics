@@ -387,14 +387,17 @@ with eng_col1:
         }).reset_index()
         monthly_eng = monthly_eng.rename(columns={eng_col_name: 'Engagement', view_col_name: 'Просмотры'})
         def month_sort(m):
-            mo = {'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
+            mo_ru = {'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,
                   'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12}
+            mo_en = {'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,
+                  'July':7,'August':8,'September':9,'October':10,'November':11,'December':12}
+            mo = {**mo_ru, **mo_en}
             p = m.split()
             return int(p[1])*100+mo.get(p[0],0) if len(p)==2 and p[0] in mo else 0
         
         monthly_eng['sort'] = monthly_eng['Месяц'].apply(month_sort)
         monthly_eng = monthly_eng.sort_values('sort').tail(12)
-        monthly_eng['Month'] = monthly_eng['Месяц'].apply(_to_en_month)
+        monthly_eng['Month'] = monthly_eng['Месяц']
         
         fig = px.line(monthly_eng, x='Month', y='Engagement', template="plotly_white",
                      markers=True, color_discrete_sequence=['#43e97b'])
