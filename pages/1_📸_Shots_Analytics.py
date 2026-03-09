@@ -379,7 +379,7 @@ with eng_col1:
         eng_col_name = 'Engagement%' if 'Engagement%' in df.columns else 'Engagement'
         view_col_name = 'Просмотры' if 'Просмотры' in df.columns else 'Views'
         if eng_col_name in df.columns and view_col_name in df.columns:
-            df[eng_col_name] = pd.to_numeric(df[eng_col_name], errors='coerce')
+            df[eng_col_name] = pd.to_numeric(df[eng_col_name].astype(str).str.replace('%', ''), errors='coerce')
             df[view_col_name] = pd.to_numeric(df[view_col_name].astype(str).str.replace(',', ''), errors='coerce')
         monthly_eng = df.groupby('Месяц').agg({
             eng_col_name: 'mean',
