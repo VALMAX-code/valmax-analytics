@@ -7,17 +7,7 @@ from utils import load_meta, show_last_updated, CRON_SCHEDULE
 st.set_page_config(page_title="Dribbble Profitability", page_icon="💰", layout="wide")
 
 # Sidebar
-with st.sidebar:
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    }
-    [data-testid="stSidebar"] * { color: white !important; }
-    </style>
-    """, unsafe_allow_html=True)
-    st.title("💰 Profitability")
-    st.caption("Dribbble Channel P&L")
+
 
 st.title("💰 Dribbble Profitability")
 st.caption("Аналітика прибутковості Dribbble каналу — тільки витрати пов'язані з Dribbble")
@@ -50,9 +40,9 @@ for col in numeric_cols:
     df[col] = pd.to_numeric(df[col].astype(str).str.replace('$','').str.replace(',',''), errors='coerce').fillna(0)
 
 # --- KPIs ---
-st.markdown("### 📊 Загальні показники")
 latest = df.iloc[-1]
 total_cost = latest['TOTAL COSTS']
+st.markdown(f"### 📊 {latest['Month']}")
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("💰 Total Costs", f"${total_cost:,.0f}", help="Загальні витрати на Dribbble за останній місяць")
