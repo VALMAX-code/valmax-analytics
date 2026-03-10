@@ -27,10 +27,8 @@ st.caption("Аналітика прибутковості Dribbble каналу 
 def load_profitability():
     import gspread
     from google.oauth2.service_account import Credentials
-    creds = Credentials.from_service_account_file(
-        st.secrets["gcp_service_account"]["path"] if "gcp_service_account" in st.secrets else "/Users/openzlo/.openclaw/workspace/.secrets/google-service-account.json",
-        scopes=['https://www.googleapis.com/auth/spreadsheets']
-    )
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
     gc = gspread.authorize(creds)
     ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Profitability')
     data = ws.get_all_records()
