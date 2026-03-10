@@ -188,58 +188,18 @@ else:
 
 st.divider()
 
-# --- Rate Card (editable) ---
-st.markdown("### 💲 Вартість роботи фрілансерів")
-st.caption("Вартість шота та сету від кожного фрілансера. Редагуйте прямо тут — зміни зберігаються автоматично.")
+# --- Freelancer Work Log (editable) ---
+st.markdown("### 📝 Робота фрілансерів")
+st.caption("Шоти, сети та ставки по кожному фрілансеру за місяць. Ставки можуть змінюватись щомісяця.")
 
-@st.cache_data(ttl=60)
-def load_rates():
-    import gspread
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
-    gc = gspread.authorize(creds)
-    ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Rates')
-    return pd.DataFrame(ws.get_all_records())
-
-def save_rates(df_rates):
-    import gspread
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
-    gc = gspread.authorize(creds)
-    ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Rates')
-    ws.update('A1', [df_rates.columns.tolist()] + df_rates.values.tolist())
-
-try:
-    df_rates = load_rates()
-    for col in ['Cost per Shot ($)', 'Cost per Set ($)']:
-        if col in df_rates.columns:
-            df_rates[col] = pd.to_numeric(df_rates[col].astype(str).str.replace('$','').str.replace(',',''), errors='coerce').fillna(0).astype(int)
-    
-    edited_rates = st.data_editor(
-        df_rates,
-        use_container_width=True,
-        hide_index=True,
-        num_rows="dynamic",
-        column_config={
-            "Freelancer": st.column_config.TextColumn("Freelancer", width="medium"),
-            "Cost per Shot ($)": st.column_config.NumberColumn("Cost per Shot ($)", min_value=0, format="$%d"),
-            "Cost per Set ($)": st.column_config.NumberColumn("Cost per Set ($)", min_value=0, format="$%d"),
-        },
-        key="rates_editor"
-    )
-    
-    if st.button("💾 Зберегти тарифи", key="save_rates"):
-        save_rates(edited_rates)
-        st.success("✅ Тарифи збережено!")
-        st.cache_data.clear()
-except Exception as e:
-    st.error(f"Помилка: {e}")
-
-st.divider()
-
-# --- Work Log (editable) ---
-st.markdown("### 📝 Виконана робота фрілансерів")
-st.caption("Кількість шотів та сетів від кожного фрілансера за місяць. Редагуйте прямо тут.")
+FREELANCER_NAMES = [
+    'Stepanchykov Oleh',
+    'Nadezhda Galahova',
+    'Tetiana Prykhodko',
+    'Kateryna Fediakina',
+    'Andrii Muzalov',
+    'Mykyta Laptov',
+]
 
 @st.cache_data(ttl=60)
 def load_work_log():
@@ -248,7 +208,10 @@ def load_work_log():
     creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
     gc = gspread.authorize(creds)
     ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Work Log')
-    return pd.DataFrame(ws.get_all_records())
+    data = ws.get_all_records()
+    if not data:
+        return pd.DataFrame(columns=['Month', 'Freelancer', 'Shots', 'Sets', 'Cost per Shot ($)', 'Cost per Set ($)', 'Total ($)'])
+    return pd.DataFrame(data)
 
 def save_work_log(df_wl):
     import gspread
@@ -256,68 +219,63 @@ def save_work_log(df_wl):
     creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
     gc = gspread.authorize(creds)
     ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Work Log')
+    # Recalculate totals
+    df_save = df_wl.copy()
+    for col in ['Shots', 'Sets', 'Cost per Shot ($)', 'Cost per Set ($)']:
+        df_save[col] = pd.to_numeric(df_save[col], errors='coerce').fillna(0)
+    df_save['Total ($)'] = df_save['Shots'] * df_save['Cost per Shot ($)'] + df_save['Sets'] * df_save['Cost per Set ($)']
+    rows = [df_save.columns.tolist()] + df_save.values.tolist()
     ws.clear()
-    ws.update('A1', [df_wl.columns.tolist()] + df_wl.values.tolist())
+    ws.update('A1', rows)
+    return df_save
 
 try:
     df_wl = load_work_log()
-    for col in ['Shots', 'Sets']:
+    for col in ['Shots', 'Sets', 'Cost per Shot ($)', 'Cost per Set ($)', 'Total ($)']:
         if col in df_wl.columns:
             df_wl[col] = pd.to_numeric(df_wl[col], errors='coerce').fillna(0).astype(int)
-    
-    # Get available months from profitability data
+
     available_months = df['Month'].tolist()
-    
+
     edited_wl = st.data_editor(
         df_wl,
         use_container_width=True,
         hide_index=True,
         num_rows="dynamic",
         column_config={
-            "Month": st.column_config.SelectboxColumn("Month", options=available_months, width="medium"),
-            "Freelancer": st.column_config.TextColumn("Freelancer", width="medium"),
-            "Shots": st.column_config.NumberColumn("Shots", min_value=0, format="%d"),
-            "Sets": st.column_config.NumberColumn("Sets", min_value=0, format="%d"),
+            "Month": st.column_config.SelectboxColumn("Month", options=available_months, width="small"),
+            "Freelancer": st.column_config.SelectboxColumn("Freelancer", options=FREELANCER_NAMES, width="medium"),
+            "Shots": st.column_config.NumberColumn("Shots", min_value=0, format="%d", width="small"),
+            "Sets": st.column_config.NumberColumn("Sets", min_value=0, format="%d", width="small"),
+            "Cost per Shot ($)": st.column_config.NumberColumn("$/Shot", min_value=0, format="$%d", width="small"),
+            "Cost per Set ($)": st.column_config.NumberColumn("$/Set", min_value=0, format="$%d", width="small"),
+            "Total ($)": st.column_config.NumberColumn("Total", format="$%d", disabled=True, width="small"),
         },
         key="work_editor"
     )
-    
-    if st.button("💾 Зберегти роботу", key="save_work"):
-        save_work_log(edited_wl)
-        st.success("✅ Дані збережено!")
+
+    if st.button("💾 Зберегти", key="save_work", type="primary"):
+        saved = save_work_log(edited_wl)
+        st.success("✅ Збережено!")
         st.cache_data.clear()
-    
-    # Calculate cost based on rates
-    if not df_rates.empty and not df_wl.empty:
-        st.markdown("#### 💰 Розрахунок вартості")
-        rates_dict = {}
-        for _, r in edited_rates.iterrows():
-            rates_dict[r['Freelancer']] = {'shot': r.get('Cost per Shot ($)', 0), 'set': r.get('Cost per Set ($)', 0)}
+
+    # Summary table
+    if not df_wl.empty and df_wl['Total ($)'].sum() > 0:
+        st.markdown("#### 💰 Підсумок по фрілансерах")
+        summary = df_wl.groupby('Freelancer').agg(
+            Total_Shots=('Shots', 'sum'),
+            Total_Sets=('Sets', 'sum'),
+            Total_Cost=('Total ($)', 'sum'),
+            Months=('Month', 'nunique'),
+        ).reset_index().sort_values('Total_Cost', ascending=False)
+        summary.columns = ['Freelancer', 'Total Shots', 'Total Sets', 'Total Cost ($)', 'Months Active']
         
-        calc_data = []
-        for _, row in edited_wl.iterrows():
-            name = row['Freelancer']
-            shots = row.get('Shots', 0)
-            sets = row.get('Sets', 0)
-            rate = rates_dict.get(name, {'shot': 0, 'set': 0})
-            cost_shots = shots * rate['shot']
-            cost_sets = sets * rate['set']
-            total = cost_shots + cost_sets
-            if shots > 0 or sets > 0:
-                calc_data.append({
-                    'Month': row['Month'],
-                    'Freelancer': name,
-                    'Shots': shots,
-                    '× Rate': f"${rate['shot']}",
-                    '= Shots Cost': f"${cost_shots:,.0f}",
-                    'Sets': sets,
-                    '× Rate ': f"${rate['set']}",
-                    '= Sets Cost': f"${cost_sets:,.0f}",
-                    'TOTAL': f"${total:,.0f}"
-                })
-        
-        if calc_data:
-            st.dataframe(pd.DataFrame(calc_data), use_container_width=True, hide_index=True)
+        fig_summary = px.bar(summary.sort_values('Total Cost ($)'), x='Total Cost ($)', y='Freelancer', 
+                            orientation='h', text='Total Cost ($)', color_discrete_sequence=['#3498db'])
+        fig_summary.update_traces(texttemplate='$%{text:,.0f}', textposition='outside')
+        fig_summary.update_layout(yaxis_title='', height=max(250, len(summary)*50))
+        st.plotly_chart(fig_summary, use_container_width=True)
+
 except Exception as e:
     st.error(f"Помилка: {e}")
 
