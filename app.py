@@ -15,17 +15,23 @@ if logo_path.exists():
     </div>
     """, unsafe_allow_html=True)
 
-# Bigger sidebar font
+# Sidebar styling
 st.markdown("""<style>
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%) !important;
+}
+section[data-testid="stSidebar"] * { color: #e0e0e0 !important; }
+section[data-testid="stSidebar"] a { color: #c4b5fd !important; }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] span {
     font-size: 1.1rem !important;
     font-weight: 500 !important;
 }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] [data-testid="stSidebarNavSeparator"] span {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
     font-weight: 700 !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    color: #8b8ba3 !important;
 }
 </style>""", unsafe_allow_html=True)
 
