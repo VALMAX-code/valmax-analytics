@@ -23,8 +23,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- DATA ---
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=300)
 def load_keywords():
+    """Load keywords from SQLite (fast) with Google Sheets fallback."""
+    import sqlite3
+    from pathlib import Path
+    db_path = Path(__file__).parent.parent / "keywords.db"
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            df = pd.read_sql_query("SELECT keyword as Keyword, volume as 'Volume/mo', cpc as 'CPC ($)', google_pos as 'Google Pos', est_traffic as 'Est. Traffic/mo', tag_page as 'Tag Page', landing_url as 'Landing URL' FROM keywords", conn)
+            conn.close()
+            return df
+        except:
+            pass
+    # Fallback to Google Sheets
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
         creds = Credentials.from_service_account_info(creds_dict, scopes=[
@@ -33,7 +46,6 @@ def load_keywords():
         ])
         gc = gspread.authorize(creds)
         sh = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
-        
         ws = sh.worksheet("🔑 Dribbble Keywords")
         rows = ws.get_all_records()
         return pd.DataFrame(rows)
