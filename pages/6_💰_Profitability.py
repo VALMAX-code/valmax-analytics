@@ -188,6 +188,141 @@ else:
 
 st.divider()
 
+# --- Rate Card (editable) ---
+st.markdown("### 💲 Вартість роботи фрілансерів")
+st.caption("Вартість шота та сету від кожного фрілансера. Редагуйте прямо тут — зміни зберігаються автоматично.")
+
+@st.cache_data(ttl=60)
+def load_rates():
+    import gspread
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
+    gc = gspread.authorize(creds)
+    ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Rates')
+    return pd.DataFrame(ws.get_all_records())
+
+def save_rates(df_rates):
+    import gspread
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
+    gc = gspread.authorize(creds)
+    ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Rates')
+    ws.update('A1', [df_rates.columns.tolist()] + df_rates.values.tolist())
+
+try:
+    df_rates = load_rates()
+    for col in ['Cost per Shot ($)', 'Cost per Set ($)']:
+        if col in df_rates.columns:
+            df_rates[col] = pd.to_numeric(df_rates[col].astype(str).str.replace('$','').str.replace(',',''), errors='coerce').fillna(0).astype(int)
+    
+    edited_rates = st.data_editor(
+        df_rates,
+        use_container_width=True,
+        hide_index=True,
+        num_rows="dynamic",
+        column_config={
+            "Freelancer": st.column_config.TextColumn("Freelancer", width="medium"),
+            "Cost per Shot ($)": st.column_config.NumberColumn("Cost per Shot ($)", min_value=0, format="$%d"),
+            "Cost per Set ($)": st.column_config.NumberColumn("Cost per Set ($)", min_value=0, format="$%d"),
+        },
+        key="rates_editor"
+    )
+    
+    if st.button("💾 Зберегти тарифи", key="save_rates"):
+        save_rates(edited_rates)
+        st.success("✅ Тарифи збережено!")
+        st.cache_data.clear()
+except Exception as e:
+    st.error(f"Помилка: {e}")
+
+st.divider()
+
+# --- Work Log (editable) ---
+st.markdown("### 📝 Виконана робота фрілансерів")
+st.caption("Кількість шотів та сетів від кожного фрілансера за місяць. Редагуйте прямо тут.")
+
+@st.cache_data(ttl=60)
+def load_work_log():
+    import gspread
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
+    gc = gspread.authorize(creds)
+    ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Work Log')
+    return pd.DataFrame(ws.get_all_records())
+
+def save_work_log(df_wl):
+    import gspread
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=['https://www.googleapis.com/auth/spreadsheets'])
+    gc = gspread.authorize(creds)
+    ws = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc').worksheet('💰 Work Log')
+    ws.clear()
+    ws.update('A1', [df_wl.columns.tolist()] + df_wl.values.tolist())
+
+try:
+    df_wl = load_work_log()
+    for col in ['Shots', 'Sets']:
+        if col in df_wl.columns:
+            df_wl[col] = pd.to_numeric(df_wl[col], errors='coerce').fillna(0).astype(int)
+    
+    # Get available months from profitability data
+    available_months = df['Month'].tolist()
+    
+    edited_wl = st.data_editor(
+        df_wl,
+        use_container_width=True,
+        hide_index=True,
+        num_rows="dynamic",
+        column_config={
+            "Month": st.column_config.SelectboxColumn("Month", options=available_months, width="medium"),
+            "Freelancer": st.column_config.TextColumn("Freelancer", width="medium"),
+            "Shots": st.column_config.NumberColumn("Shots", min_value=0, format="%d"),
+            "Sets": st.column_config.NumberColumn("Sets", min_value=0, format="%d"),
+        },
+        key="work_editor"
+    )
+    
+    if st.button("💾 Зберегти роботу", key="save_work"):
+        save_work_log(edited_wl)
+        st.success("✅ Дані збережено!")
+        st.cache_data.clear()
+    
+    # Calculate cost based on rates
+    if not df_rates.empty and not df_wl.empty:
+        st.markdown("#### 💰 Розрахунок вартості")
+        rates_dict = {}
+        for _, r in edited_rates.iterrows():
+            rates_dict[r['Freelancer']] = {'shot': r.get('Cost per Shot ($)', 0), 'set': r.get('Cost per Set ($)', 0)}
+        
+        calc_data = []
+        for _, row in edited_wl.iterrows():
+            name = row['Freelancer']
+            shots = row.get('Shots', 0)
+            sets = row.get('Sets', 0)
+            rate = rates_dict.get(name, {'shot': 0, 'set': 0})
+            cost_shots = shots * rate['shot']
+            cost_sets = sets * rate['set']
+            total = cost_shots + cost_sets
+            if shots > 0 or sets > 0:
+                calc_data.append({
+                    'Month': row['Month'],
+                    'Freelancer': name,
+                    'Shots': shots,
+                    '× Rate': f"${rate['shot']}",
+                    '= Shots Cost': f"${cost_shots:,.0f}",
+                    'Sets': sets,
+                    '× Rate ': f"${rate['set']}",
+                    '= Sets Cost': f"${cost_sets:,.0f}",
+                    'TOTAL': f"${total:,.0f}"
+                })
+        
+        if calc_data:
+            st.dataframe(pd.DataFrame(calc_data), use_container_width=True, hide_index=True)
+except Exception as e:
+    st.error(f"Помилка: {e}")
+
+st.divider()
+
 # --- Full Detail Table ---
 st.markdown("### 📋 Повна деталізація")
 st.caption("Всі витрати на Dribbble канал по категоріях та місяцях")
