@@ -44,11 +44,12 @@ latest = df.iloc[-1]
 total_cost = latest['TOTAL COSTS']
 st.markdown(f"### 📊 {latest['Month']}")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("💰 Total Costs", f"${total_cost:,.0f}", help="Загальні витрати на Dribbble за останній місяць")
-col2.metric("🏷️ Subscriptions", f"${latest['Dribbble Pro Subscription']:,.0f}")
-col3.metric("🎨 Freelancers", f"${sum(latest[c] for c in df.columns if 'Freelancer' in c):,.0f}")
-col4.metric("👥 Team Share", f"${latest['Team (Dribbble share)']:,.0f}")
+col2.metric("📢 Dribbble Ads", f"${latest['Dribbble Pro Subscription']:,.0f}", help="Офіційна реклама Dribbble (Pro subscription, promoted shots)")
+col3.metric("🚀 Boosting", f"${latest.get('Dribbble Boosting/SaaS', 0):,.0f}", help="Неофіційний промоушен (engagement boosting, SaaS сервіси)")
+col4.metric("🎨 Freelancers", f"${sum(latest[c] for c in df.columns if 'Freelancer' in c):,.0f}")
+col5.metric("👥 Team Share", f"${latest['Team (Dribbble share)']:,.0f}")
 
 st.divider()
 
