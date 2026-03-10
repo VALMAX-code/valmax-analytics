@@ -7,6 +7,12 @@ from utils import show_last_updated
 
 st.set_page_config(page_title="Dribbble Profitability", page_icon="💰", layout="wide")
 
+st.markdown("""<style>
+section[data-testid="stSidebar"] { background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); }
+section[data-testid="stSidebar"] * { color: #fff !important; }
+section[data-testid="stSidebar"] a { color: #e0d4ff !important; }
+</style>""", unsafe_allow_html=True)
+
 st.title("💰 Dribbble Profitability")
 st.caption("Аналітика прибутковості Dribbble каналу — витрати, фрілансери, динаміка по місяцях")
 
