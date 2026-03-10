@@ -249,9 +249,9 @@ except Exception as e:
 
 st.divider()
 
-# --- Work Log (shots/sets only) ---
+# --- Work Log per month ---
 st.markdown("### 📝 Виконана робота фрілансерів")
-st.caption("Кількість шотів та сетів за місяць. Оплата береться автоматично з QuickBooks.")
+st.caption("Вписуйте кількість шотів та сетів. Місяці та фрілансери заповнені автоматично. Оплата — з QuickBooks.")
 
 try:
     df_wl = load_work_log()
@@ -259,58 +259,91 @@ try:
         if col in df_wl.columns:
             df_wl[col] = pd.to_numeric(df_wl[col], errors='coerce').fillna(0).astype(int)
 
-    available_months = df['Month'].tolist()
+    # Show per-month tabs
+    wl_months = df_wl['Month'].unique().tolist() if not df_wl.empty else []
+    
+    if wl_months:
+        tabs = st.tabs(wl_months)
+        edited_parts = {}
+        for i, month in enumerate(wl_months):
+            with tabs[i]:
+                month_df = df_wl[df_wl['Month'] == month][['Freelancer', 'Shots', 'Sets']].reset_index(drop=True)
+                edited = st.data_editor(
+                    month_df, use_container_width=True, hide_index=True,
+                    column_config={
+                        "Freelancer": st.column_config.TextColumn("Freelancer", disabled=True, width="medium"),
+                        "Shots": st.column_config.NumberColumn("Shots", min_value=0, format="%d"),
+                        "Sets": st.column_config.NumberColumn("Sets", min_value=0, format="%d"),
+                    },
+                    key=f"work_{month}"
+                )
+                # Show QB payment for this month
+                fl_pay = {}
+                month_prof = df[df['Month'] == month]
+                if not month_prof.empty:
+                    row = month_prof.iloc[0]
+                    for col in freelancer_cols:
+                        name = col.replace('Freelancer: ', '')
+                        if row[col] > 0:
+                            fl_pay[name] = row[col]
+                
+                if fl_pay:
+                    st.markdown("**💳 Оплати з QuickBooks:**")
+                    pay_str = " · ".join([f"{n}: **${v:,.0f}**" for n, v in fl_pay.items()])
+                    st.markdown(pay_str)
+                
+                edited_parts[month] = edited
 
-    edited_wl = st.data_editor(
-        df_wl, use_container_width=True, hide_index=True, num_rows="dynamic",
-        column_config={
-            "Month": st.column_config.SelectboxColumn("Month", options=available_months, width="small"),
-            "Freelancer": st.column_config.SelectboxColumn("Freelancer", options=FREELANCER_NAMES, width="medium"),
-            "Shots": st.column_config.NumberColumn("Shots", min_value=0, format="%d"),
-            "Sets": st.column_config.NumberColumn("Sets", min_value=0, format="%d"),
-        },
-        key="work_editor"
-    )
+        if st.button("💾 Зберегти роботу", key="save_work", type="primary"):
+            # Rebuild full df
+            all_rows = []
+            for month, edited in edited_parts.items():
+                for _, r in edited.iterrows():
+                    all_rows.append({'Month': month, 'Freelancer': r['Freelancer'], 'Shots': r['Shots'], 'Sets': r['Sets']})
+            df_save = pd.DataFrame(all_rows)
+            ws = _gs_connect().worksheet('💰 Work Log')
+            ws.clear()
+            ws.update('A1', [df_save.columns.tolist()] + df_save.values.tolist())
+            st.success("✅ Збережено!")
+            st.cache_data.clear()
+    else:
+        st.info("Додайте місяці в таблицю '💰 Profitability' — вони з'являться тут автоматично")
 
-    if st.button("💾 Зберегти роботу", key="save_work", type="primary"):
-        ws = _gs_connect().worksheet('💰 Work Log')
-        ws.clear()
-        ws.update('A1', [edited_wl.columns.tolist()] + edited_wl.values.tolist())
-        st.success("✅ Збережено!")
-        st.cache_data.clear()
+    # --- Charts ---
+    if not df_wl.empty and (df_wl['Shots'].sum() > 0 or df_wl['Sets'].sum() > 0):
+        st.divider()
+        st.markdown("### 📊 Продуктивність фрілансерів")
 
-    # Filter work log by selected period
-    if not df_wl.empty:
-        df_wl_filtered = df_wl.copy()
-        if selected != 'All Time':
-            if selected in df_wl_filtered['Month'].values:
-                df_wl_filtered = df_wl_filtered[df_wl_filtered['Month'] == selected]
+        # Shots per freelancer (total)
+        fl_totals = df_wl.groupby('Freelancer').agg(Shots=('Shots','sum'), Sets=('Sets','sum')).reset_index()
+        fl_totals = fl_totals[(fl_totals['Shots'] > 0) | (fl_totals['Sets'] > 0)]
+        
+        if not fl_totals.empty:
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.markdown("#### 📸 Шоти по фрілансерах")
+                fig_s = px.bar(fl_totals.sort_values('Shots'), x='Shots', y='Freelancer', orientation='h',
+                              text='Shots', color_discrete_sequence=['#3498db'])
+                fig_s.update_traces(textposition='outside')
+                fig_s.update_layout(height=max(250, len(fl_totals)*50), yaxis_title='')
+                st.plotly_chart(fig_s, use_container_width=True)
+            with col_b:
+                st.markdown("#### 📦 Сети по фрілансерах")
+                fig_st = px.bar(fl_totals.sort_values('Sets'), x='Sets', y='Freelancer', orientation='h',
+                               text='Sets', color_discrete_sequence=['#2ecc71'])
+                fig_st.update_traces(textposition='outside')
+                fig_st.update_layout(height=max(250, len(fl_totals)*50), yaxis_title='')
+                st.plotly_chart(fig_st, use_container_width=True)
 
-        # Merge with QuickBooks freelancer payments
-        if df_wl_filtered['Shots'].sum() > 0 or df_wl_filtered['Sets'].sum() > 0:
-            st.markdown(f"#### 📊 Підсумок — {period_label}")
-
-            # Get QB payments per freelancer from Profitability sheet
-            fl_payments = {}
-            for col in freelancer_cols:
-                name = col.replace('Freelancer: ', '')
-                fl_payments[name] = dff[col].sum()
-
-            summary_data = []
-            for name in df_wl_filtered['Freelancer'].unique():
-                rows = df_wl_filtered[df_wl_filtered['Freelancer'] == name]
-                shots = rows['Shots'].sum()
-                sets = rows['Sets'].sum()
-                qb_cost = fl_payments.get(name, 0)
-                summary_data.append({
-                    'Freelancer': name,
-                    'Shots': int(shots),
-                    'Sets': int(sets),
-                    'QB Payment ($)': f"${qb_cost:,.0f}" if qb_cost > 0 else '—',
-                })
-
-            if summary_data:
-                st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
+        # Monthly trend
+        if len(wl_months) > 1:
+            monthly_totals = df_wl.groupby('Month').agg(Shots=('Shots','sum'), Sets=('Sets','sum')).reset_index()
+            st.markdown("#### 📈 Шоти та сети по місяцях")
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=monthly_totals['Month'], y=monthly_totals['Shots'], name='Shots', marker_color='#3498db'))
+            fig_m.add_trace(go.Bar(x=monthly_totals['Month'], y=monthly_totals['Sets'], name='Sets', marker_color='#2ecc71'))
+            fig_m.update_layout(barmode='group', height=350, yaxis_title='Count')
+            st.plotly_chart(fig_m, use_container_width=True)
 
 except Exception as e:
     st.error(f"Помилка: {e}")
