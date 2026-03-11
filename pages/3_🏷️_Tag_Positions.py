@@ -180,16 +180,22 @@ st.caption("""
 st.divider()
 st.markdown("### 🎯 Best Performing Shots (by tag appearances)")
 
-shot_stats = filtered.groupby('Shot Name').agg(
-    tags_count=('Tag', 'count'),
-    avg_position=('Position', 'mean'),
-    best_position=('Position', 'min'),
-    first_places=('Position', lambda x: (x == 1).sum()),
-    top5_count=('Position', lambda x: (x <= 5).sum()),
-    top10_count=('Position', lambda x: ((x > 5) & (x <= 10)).sum()),
-    outside10=('Position', lambda x: (x > 10).sum()),
-    views=('Views', 'first')
-).reset_index().sort_values('tags_count', ascending=False)
+agg_dict = {
+    'tags_count': ('Tag', 'count'),
+    'avg_position': ('Position', 'mean'),
+    'best_position': ('Position', 'min'),
+    'first_places': ('Position', lambda x: (x == 1).sum()),
+    'top5_count': ('Position', lambda x: (x <= 5).sum()),
+    'top10_count': ('Position', lambda x: ((x > 5) & (x <= 10)).sum()),
+    'outside10': ('Position', lambda x: (x > 10).sum()),
+}
+if 'Views' in filtered.columns:
+    agg_dict['views'] = ('Views', 'first')
+
+shot_stats = filtered.groupby('Shot Name').agg(**agg_dict).reset_index().sort_values('tags_count', ascending=False)
+
+if 'views' not in shot_stats.columns:
+    shot_stats['views'] = 0
 
 shot_stats['avg_position'] = shot_stats['avg_position'].round(1)
 
