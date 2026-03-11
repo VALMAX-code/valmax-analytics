@@ -218,24 +218,25 @@ st.dataframe(
 st.caption("**Tags Found** — в скількох тегах шот знайдений · **Avg Position** — середня позиція · **Best** — найкраща · **#1 Count** — скільки разів на 1 місці · **Top 5** — скільки разів в топ-5")
 
 # --- SCATTER: VIEWS vs POSITION ---
-st.divider()
-st.markdown("### 📈 Views vs Tag Position")
+if 'Views' in filtered.columns and filtered['Views'].sum() > 0:
+    st.divider()
+    st.markdown("### 📈 Views vs Tag Position")
 
-scatter_data = filtered.copy()
-scatter_data['Shot Short'] = scatter_data['Shot Name'].str[:30]
+    scatter_data = filtered.copy()
+    scatter_data['Shot Short'] = scatter_data['Shot Name'].str[:30]
 
-fig = px.scatter(scatter_data, x='Position', y='Views', 
-                 color='Shot Short', hover_data=['Tag', 'Shot Name'],
-                 template="plotly_white",
-                 color_discrete_sequence=px.colors.qualitative.Set2)
-fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                 font=dict(color="#636e72"), height=450,
-                 xaxis_title="Position in Tag", yaxis_title="Shot Views",
-                 showlegend=False)
-fig.update_xaxes(autorange="reversed")
-st.plotly_chart(fig, use_container_width=True)
+    fig = px.scatter(scatter_data, x='Position', y='Views', 
+                     color='Shot Short', hover_data=['Tag', 'Shot Name'],
+                     template="plotly_white",
+                     color_discrete_sequence=px.colors.qualitative.Set2)
+    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                     font=dict(color="#636e72"), height=450,
+                     xaxis_title="Position in Tag", yaxis_title="Shot Views",
+                     showlegend=False)
+    fig.update_xaxes(autorange="reversed")
+    st.plotly_chart(fig, use_container_width=True)
 
-st.caption("Кожна точка = один шот в одному тегу. Чим лівіше (ближче до #1) і вище (більше views) — тим краще. Якщо шот з високими views далеко від #1, є потенціал для покращення позиції")
+    st.caption("Кожна точка = один шот в одному тегу. Чим лівіше (ближче до #1) і вище (більше views) — тим краще. Якщо шот з високими views далеко від #1, є потенціал для покращення позиції")
 
 # --- TAG CATEGORIES ---
 st.divider()
@@ -315,7 +316,10 @@ elif pos_filter == "25+":
     display_all = display_all[display_all['Position'] > 25]
 
 display_all = display_all.sort_values('Position').copy()
-display_all['Views'] = display_all['Views'].apply(lambda v: f"{v:,}")
+if 'Views' in display_all.columns and display_all['Views'].sum() > 0:
+    display_all['Views'] = display_all['Views'].apply(lambda v: f"{v:,}" if isinstance(v, (int, float)) else v)
+else:
+    display_all['Views'] = '—'
 
 # Medal emojis
 def medal(pos):
@@ -329,15 +333,22 @@ def medal(pos):
 display_all['Medal'] = display_all['Position'].apply(medal)
 display_all['Rank'] = display_all.apply(lambda r: f"{r['Medal']} #{r['Position']}", axis=1)
 
+table_cols = ['Rank', 'Tag', 'Shot Name']
+col_config = {
+    "Rank": st.column_config.TextColumn("📍 Position", width="small"),
+    "Tag": st.column_config.TextColumn("🏷️ Tag", width="medium"),
+    "Shot Name": st.column_config.TextColumn("📸 Shot", width="large"),
+}
+if 'Views' in display_all.columns:
+    table_cols.append('Views')
+    col_config["Views"] = st.column_config.TextColumn("👁️ Views", width="small")
+if 'Total on Page' in display_all.columns:
+    table_cols.append('Total on Page')
+    col_config["Total on Page"] = st.column_config.NumberColumn("⚔️ Competitors", width="small")
+
 st.dataframe(
-    display_all[['Rank', 'Tag', 'Shot Name', 'Views', 'Total on Page']],
-    column_config={
-        "Rank": st.column_config.TextColumn("📍 Position", help="Позиція шота VALMAX на сторінці тегу Dribbble", width="small"),
-        "Tag": st.column_config.TextColumn("🏷️ Tag", help="Тег на Dribbble (клікабельний пошук)", width="medium"),
-        "Shot Name": st.column_config.TextColumn("📸 Shot", help="Назва шота VALMAX який займає цю позицію", width="large"),
-        "Views": st.column_config.TextColumn("👁️ Views", help="Кількість переглядів шота", width="small"),
-        "Total on Page": st.column_config.NumberColumn("⚔️ Competitors", help="Кількість шотів на сторінці тегу. 25 = повна сторінка (висока конкуренція). 2-5 = мало конкурентів", width="small"),
-    },
+    display_all[table_cols],
+    column_config=col_config,
     use_container_width=True, hide_index=True,
     height=600
 )
@@ -529,12 +540,20 @@ def calc_perspectiveness(tag, position, total_on_page):
     }
 
 # Calculate for all tags (best position per tag)
-tag_best = df.groupby('Tag').agg(
-    best_position=('Position', 'min'),
-    total_on_page=('Total on Page', 'max'),
-    shot=('Shot Name', 'first'),
-    views=('Views', 'max')
-).reset_index()
+tag_agg = {
+    'best_position': ('Position', 'min'),
+    'shot': ('Shot Name', 'first'),
+}
+if 'Total on Page' in df.columns:
+    tag_agg['total_on_page'] = ('Total on Page', 'max')
+if 'Views' in df.columns:
+    tag_agg['views'] = ('Views', 'max')
+
+tag_best = df.groupby('Tag').agg(**tag_agg).reset_index()
+if 'total_on_page' not in tag_best.columns:
+    tag_best['total_on_page'] = 0
+if 'views' not in tag_best.columns:
+    tag_best['views'] = 0
 
 scores = []
 for _, row in tag_best.iterrows():
