@@ -96,14 +96,18 @@ def load_data():
         vals = ws.get('M14:R60')
         if vals and len(vals) > 0:
             headers = vals[0]
+            def safe_int(v):
+                if not v: return 0
+                try: return int(str(v).replace(',', '').replace(' ', ''))
+                except: return 0
             for row in vals[1:]:
                 if len(row) >= 6 and row[0]:
                     monthly[row[0]] = {
-                        'shots': int(row[1]) if row[1] else 0,
-                        'views': int(row[2]) if row[2] else 0,
-                        'likes': int(row[3]) if row[3] else 0,
-                        'saves': int(row[4]) if row[4] else 0,
-                        'comments': int(row[5]) if row[5] else 0,
+                        'shots': safe_int(row[1]),
+                        'views': safe_int(row[2]),
+                        'likes': safe_int(row[3]),
+                        'saves': safe_int(row[4]),
+                        'comments': safe_int(row[5]),
                     }
     except:
         pass
