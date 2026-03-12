@@ -70,9 +70,12 @@ def load_data():
     # Parse dates
     if 'Дата' in df.columns:
         df['Date'] = pd.to_datetime(df['Дата'], format='mixed', errors='coerce')
+        # Drop rows with invalid dates for date-based calculations
+        valid_dates = df['Date'].notna()
         df['Year'] = df['Date'].dt.year
         df['Month_num'] = df['Date'].dt.month
-        df['Week'] = df['Date'].dt.isocalendar().week.astype(int)
+        df.loc[valid_dates, 'Week'] = df.loc[valid_dates, 'Date'].dt.isocalendar().week.astype(int)
+        df['Week'] = df['Week'].fillna(0).astype(int)
         # Week label as date range: "Feb 24 – Mar 2"
         week_start = df['Date'] - pd.to_timedelta(df['Date'].dt.weekday, unit='d')
         week_end = week_start + pd.Timedelta(days=6)
