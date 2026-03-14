@@ -1,8 +1,11 @@
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import datetime, timezone, timedelta
 
-@st.cache_data(ttl=300)
+CET = timezone(timedelta(hours=1))
+
+@st.cache_data(ttl=120)
 def load_meta():
     """Load last-updated timestamps from Meta sheet."""
     try:
@@ -15,35 +18,88 @@ def load_meta():
         sh = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
         ws = sh.worksheet("📅 Meta")
         rows = ws.get_all_records()
-        return {r['Dataset']: r['Last Updated'] for r in rows}
+        return {r['Dataset']: r for r in rows}
     except:
         return {}
 
-CRON_SCHEDULE = {
-    "Leads (Project Requests)": "Щогодини (hourly cron)",
-    "Leads (Project Intros)": "Щогодини (hourly cron)",
-    "Shots Analytics": "Щопонеділка, 8:00 CET",
-    "Tag Positions": "Щотижня (weekly cron)",
-    "SEO Data (Volume/CPC)": "Щомісяця (monthly cron)",
-    "SERP Data (Google Pos)": "Щомісяця (monthly cron)",
-    "Competitors": "Щоденно, 9:00 CET",
-    "Popular Tracker": "Щоденно, 12:00 CET",
-}
-
-def show_last_updated(dataset_name):
-    """Display last updated + next update caption."""
-    meta = load_meta()
-    ts = meta.get(dataset_name, None)
-    next_update = CRON_SCHEDULE.get(dataset_name, "")
+def _freshness_badge(ts_str):
+    """Return emoji based on how fresh the data is."""
+    if not ts_str:
+        return "⚪", "немає даних"
+    try:
+        # Try parsing "2026-03-14 02:07" format
+        ts = datetime.strptime(ts_str[:16], '%Y-%m-%d %H:%M').replace(tzinfo=CET)
+    except:
+        try:
+            # Try "14 March 2026, 08:00" format
+            ts = datetime.strptime(ts_str, '%d %B %Y, %H:%M').replace(tzinfo=CET)
+        except:
+            return "⚪", ts_str
     
-    if ts:
-        line = f"🕐 Останнє оновлення: {ts} CET"
+    now = datetime.now(CET)
+    age = now - ts
+    hours = age.total_seconds() / 3600
+    
+    if hours < 6:
+        return "🟢", f"{int(hours)}г тому"
+    elif hours < 25:
+        return "🟡", f"{int(hours)}г тому"
+    elif hours < 72:
+        days = int(hours / 24)
+        return "🟠", f"{days}д тому"
     else:
-        import datetime as _dt
-        _now = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=1)))
-        line = f"🕐 Останнє оновлення: {_now.strftime('%d %B %Y, %H:%M')} CET"
+        days = int(hours / 24)
+        return "🔴", f"{days}д тому — застарілі!"
     
-    if next_update:
-        line += f"  ·  🔄 Наступне: {next_update}"
+def show_last_updated(dataset_name):
+    """Display freshness badge + last updated + status for a section."""
+    meta = load_meta()
+    info = meta.get(dataset_name, {})
+    
+    ts = info.get('Last Updated', '') if isinstance(info, dict) else str(info)
+    status = info.get('Status', '') if isinstance(info, dict) else ''
+    details = info.get('Details', '') if isinstance(info, dict) else ''
+    schedule = info.get('Cron Schedule', '') if isinstance(info, dict) else ''
+    
+    badge, age_text = _freshness_badge(ts)
+    
+    # Status icon
+    if status == '✅':
+        status_text = '✅ Успішно'
+    elif status == '⚠️':
+        status_text = f'⚠️ Частково ({details})' if details else '⚠️ Частково'
+    elif status == '❌':
+        status_text = f'❌ Помилка ({details})' if details else '❌ Помилка'
+    else:
+        status_text = '⏳ Очікує'
+    
+    line = f"{badge} Оновлено: **{ts}** CET — {age_text}"
+    if status_text:
+        line += f"  |  {status_text}"
+    if schedule:
+        line += f"  |  🔄 {schedule}"
     
     st.caption(line)
+
+def show_section_header(title, dataset_name, icon=""):
+    """Show section title with freshness badge inline."""
+    meta = load_meta()
+    info = meta.get(dataset_name, {})
+    ts = info.get('Last Updated', '') if isinstance(info, dict) else ''
+    status = info.get('Status', '') if isinstance(info, dict) else ''
+    
+    badge, age_text = _freshness_badge(ts)
+    status_icon = status if status in ('✅', '⚠️', '❌') else '⏳'
+    
+    # Title with badge
+    st.markdown(f"### {icon} {title} {badge}{status_icon}")
+    
+    if ts:
+        schedule = info.get('Cron Schedule', '') if isinstance(info, dict) else ''
+        details = info.get('Details', '') if isinstance(info, dict) else ''
+        caption = f"Оновлено: {ts} CET ({age_text})"
+        if details:
+            caption += f" — {details}"
+        if schedule:
+            caption += f"  |  🔄 {schedule}"
+        st.caption(caption)

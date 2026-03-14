@@ -121,7 +121,7 @@ df, profile, monthly = load_data()
 
 # --- HEADER ---
 st.markdown("# 📸 VALMAX Shots Analytics")
-from utils import show_last_updated
+from utils import show_last_updated, show_section_header
 show_last_updated("Shots Analytics")
 st.markdown("Аналітика по шотам на Dribbble")
 
@@ -136,7 +136,7 @@ p5.metric("💾 Усього збережень", f"{df['Сохранения'].
 
 # --- ⭐ POPULAR TRACKER ---
 st.divider()
-st.markdown("### ⭐ Popular Tracker")
+show_section_header("Popular Tracker", "Popular Tracker", "⭐")
 st.caption("Чи потрапляють шоти VALMAX у Dribbble Popular? Перевірка 15 категорій × top 96 шотів. Timeframes: All Time / Week / Month")
 
 @st.cache_data(ttl=60)
