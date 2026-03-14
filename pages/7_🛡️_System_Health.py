@@ -1,286 +1,255 @@
 import streamlit as st
 import gspread
+import pandas as pd
 from google.oauth2.service_account import Credentials
-import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 st.set_page_config(page_title="System Health", page_icon="🛡️", layout="wide")
 
-# --- STYLE ---
+CET = timezone(timedelta(hours=1))
+
 st.markdown("""<style>
 [data-testid="stSidebar"] { background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); }
 [data-testid="stSidebar"] * { color: white !important; }
-.health-ok { background: #d4edda; border-left: 4px solid #28a745; padding: 12px; border-radius: 4px; margin: 8px 0; }
-.health-warn { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 4px; margin: 8px 0; }
-.health-error { background: #f8d7da; border-left: 4px solid #dc3545; padding: 12px; border-radius: 4px; margin: 8px 0; }
-.rule-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 16px; margin: 8px 0; }
 </style>""", unsafe_allow_html=True)
 
 st.markdown("# 🛡️ System Health & Operations")
-st.caption("Автоматична перевірка даних, правила, крони, документація")
+st.caption("Live status від усіх data pipelines — оновлюється автоматично з Meta sheet")
 
-# --- LOAD DATA ---
+# --- LOAD META + DATA ---
 @st.cache_data(ttl=120)
-def run_health_check():
+def load_all():
     creds = Credentials.from_service_account_info(
         dict(st.secrets["gcp_service_account"]),
-        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
     )
     gc = gspread.authorize(creds)
     sh = gc.open_by_key("1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc")
     
-    checks = []
+    # Meta
+    meta_ws = sh.worksheet("📅 Meta")
+    meta_rows = meta_ws.get_all_records()
+    meta = {r['Dataset']: r for r in meta_rows}
     
-    # 1. Shots check
-    ws = sh.worksheet("📊 Shots Analytics")
-    titles = ws.get('C2:C250')
-    shot_count = len([r for r in titles if r and r[0] and r[0].strip()])
+    # Live counts
+    counts = {}
+    try:
+        sa = sh.worksheet("📊 Shots Analytics")
+        titles = sa.get('C2:C250')
+        counts['shots'] = len([r for r in titles if r and r[0] and r[0].strip()])
+        profile = sa.get('N1:N5')
+        counts['followers'] = profile[0][0] if profile and profile[0] else '?'
+    except:
+        counts['shots'] = '?'
     
-    # Engagement check
-    eng_data = ws.get('H2:H250')
-    bad_eng = 0
-    for r in eng_data:
-        if r and r[0]:
-            try:
-                val = float(r[0].replace('%', ''))
-                if val > 50:
-                    bad_eng += 1
-            except:
-                pass
+    try:
+        pr = sh.worksheet("📋 Project Requests")
+        leads = pr.get('C2:C100')
+        counts['leads'] = len([r for r in leads if r and r[0] and r[0].strip()])
+    except:
+        counts['leads'] = '?'
     
-    # Monthly summary
-    monthly = ws.get('M14:M16')
-    has_monthly = bool(monthly and monthly[0] and monthly[0][0])
+    try:
+        tp = sh.worksheet("🏷️ Tag Positions")
+        counts['tag_positions'] = len(tp.col_values(1)) - 1
+    except:
+        counts['tag_positions'] = '?'
     
-    # Profile stats
-    profile = ws.get('M1:N2')
-    has_profile = bool(profile and len(profile) >= 2)
+    try:
+        comp = sh.worksheet("🏆 Competitors")
+        counts['competitors'] = len(comp.get_all_values()) - 1
+    except:
+        counts['competitors'] = '?'
     
-    # Duplicates
-    title_list = [r[0] for r in titles if r and r[0]]
-    dupes = [t for t in set(title_list) if title_list.count(t) > 1]
+    try:
+        pt = sh.worksheet("⭐ Popular Tracker")
+        pt_data = pt.get_all_values()
+        found = len([r for r in pt_data[1:] if len(r) > 3 and r[3] == 'Yes'])
+        counts['popular_found'] = found
+    except:
+        counts['popular_found'] = '?'
     
-    checks.append({
-        'section': '📸 Shots Analytics',
-        'checks': [
-            {'name': 'Кількість шотів', 'value': shot_count, 'expected': '210+', 
-             'status': 'ok' if shot_count >= 200 else ('warn' if shot_count >= 150 else 'error')},
-            {'name': 'Engagement% < 50%', 'value': f'{bad_eng} помилок', 'expected': '0',
-             'status': 'ok' if bad_eng == 0 else 'error'},
-            {'name': 'Monthly Summary (M14:R)', 'value': '✅ Є' if has_monthly else '❌ Відсутній', 'expected': 'Є',
-             'status': 'ok' if has_monthly else 'error'},
-            {'name': 'Profile Stats (M1:N5)', 'value': '✅ Є' if has_profile else '❌ Відсутній', 'expected': 'Є',
-             'status': 'ok' if has_profile else 'error'},
-            {'name': 'Дублікати', 'value': f'{len(dupes)} ({", ".join(dupes[:2])})' if dupes else '0', 'expected': '0',
-             'status': 'ok' if not dupes else 'warn'},
-        ]
-    })
+    # Cron Log — last 20 entries
+    try:
+        cl = sh.worksheet("📋 Cron Log")
+        log_data = cl.get_all_values()
+        counts['cron_log'] = log_data[-20:] if len(log_data) > 20 else log_data[1:]
+    except:
+        counts['cron_log'] = []
     
-    # 2. Leads check
-    ws_leads = sh.worksheet("📋 Project Requests")
-    lead_data = ws_leads.get('C2:C50')
-    lead_count = len([r for r in lead_data if r and r[0] and r[0].strip()])
-    
-    checks.append({
-        'section': '📋 Leads (Project Requests)',
-        'checks': [
-            {'name': 'Кількість лідів', 'value': lead_count, 'expected': '9+',
-             'status': 'ok' if lead_count >= 9 else 'warn'},
-        ]
-    })
-    
-    # 3. Keywords check
-    ws_kw = sh.worksheet("🔑 Dribbble Keywords")
-    kw_count = len(ws_kw.col_values(1)) - 1  # minus header
-    
-    checks.append({
-        'section': '🔑 Keywords Database',
-        'checks': [
-            {'name': 'Кількість keywords', 'value': f'{kw_count:,}', 'expected': '297K+',
-             'status': 'ok' if kw_count >= 290000 else ('warn' if kw_count >= 100000 else 'error')},
-        ]
-    })
-    
-    # 4. Tag Positions
-    ws_tp = sh.worksheet("🏷️ Tag Positions")
-    tp_count = len(ws_tp.col_values(1)) - 1
-    
-    checks.append({
-        'section': '🏷️ Tag Positions',
-        'checks': [
-            {'name': 'Позицій в тегах', 'value': tp_count, 'expected': '327+',
-             'status': 'ok' if tp_count >= 300 else 'warn'},
-        ]
-    })
-    
-    return checks, shot_count, lead_count
+    return meta, counts
 
 try:
-    checks, shot_count, lead_count = run_health_check()
-    
-    # --- HEALTH STATUS ---
-    st.markdown("## 🔍 Live Data Validation")
-    st.caption("Автоматична перевірка всіх Google Sheet таблиць на цілісність")
-    
-    total_ok = sum(1 for s in checks for c in s['checks'] if c['status'] == 'ok')
-    total_warn = sum(1 for s in checks for c in s['checks'] if c['status'] == 'warn')
-    total_error = sum(1 for s in checks for c in s['checks'] if c['status'] == 'error')
-    total = total_ok + total_warn + total_error
-    
-    h1, h2, h3, h4 = st.columns(4)
-    h1.metric("✅ Passed", total_ok)
-    h2.metric("⚠️ Warnings", total_warn)
-    h3.metric("🚨 Errors", total_error)
-    h4.metric("📊 Total Checks", total)
-    
-    if total_error > 0:
-        st.error("🚨 Є критичні помилки! Потрібна ручна перевірка.")
-    elif total_warn > 0:
-        st.warning("⚠️ Є попередження — не критично, але варто перевірити.")
-    else:
-        st.success("✅ Всі перевірки пройдені! Дані в нормі.")
-    
-    for section in checks:
-        st.markdown(f"### {section['section']}")
-        for check in section['checks']:
-            icon = {'ok': '✅', 'warn': '⚠️', 'error': '🚨'}[check['status']]
-            css_class = {'ok': 'health-ok', 'warn': 'health-warn', 'error': 'health-error'}[check['status']]
-            st.markdown(f"""<div class="{css_class}">
-                {icon} <b>{check['name']}</b>: {check['value']} (очікується: {check['expected']})
-            </div>""", unsafe_allow_html=True)
-
+    meta, counts = load_all()
 except Exception as e:
-    st.error(f"Не вдалося виконати перевірку: {e}")
+    st.error(f"❌ Не вдалося завантажити дані: {e}")
+    st.stop()
 
-# --- CRON SCHEDULE ---
+# --- FRESHNESS HELPER ---
+def freshness(ts_str):
+    if not ts_str:
+        return "⚪", "немає даних", 999
+    try:
+        ts = datetime.strptime(ts_str[:16], '%Y-%m-%d %H:%M').replace(tzinfo=CET)
+    except:
+        try:
+            ts = datetime.strptime(ts_str, '%d %B %Y, %H:%M').replace(tzinfo=CET)
+        except:
+            return "⚪", ts_str, 999
+    hours = (datetime.now(CET) - ts).total_seconds() / 3600
+    if hours < 6: return "🟢", f"{int(hours)}г тому", hours
+    elif hours < 25: return "🟡", f"{int(hours)}г тому", hours
+    elif hours < 72: return "🟠", f"{int(hours/24)}д тому", hours
+    else: return "🔴", f"{int(hours/24)}д тому", hours
+
+# === OVERVIEW METRICS ===
+st.markdown("## 📊 Поточний стан")
+
+m1, m2, m3, m4, m5 = st.columns(5)
+m1.metric("📸 Shots", counts.get('shots', '?'))
+m2.metric("👥 Followers", counts.get('followers', '?'))
+m3.metric("📋 Leads", counts.get('leads', '?'))
+m4.metric("🏷️ Tag Positions", counts.get('tag_positions', '?'))
+m5.metric("🏆 Competitors", counts.get('competitors', '?'))
+
 st.divider()
-st.markdown("## ⏰ Cron Jobs (Автоматичні задачі)")
-st.caption("Розклад автоматичних перевірок і оновлень")
 
-cron_data = [
-    {"Job": "🔔 Dribbble Hourly Check", "Schedule": "Кожну годину (CET)", 
-     "What": "Перевіряє ВСІ сторінки Project Requests на нових клієнтів. Повідомляє тільки якщо є нові.",
-     "Status": "🟢 Active"},
-    {"Job": "📸 Shots Weekly Update", "Schedule": "Понеділок 8:00 CET",
-     "What": "Скрейпить НОВІ шоти (не перезаписує старі!). Оновлює monthly summary та profile stats.",
-     "Status": "🟢 Active"},
-    {"Job": "⭐ Popular Daily Check", "Schedule": "Пн-Пт 12:00 CET",
-     "What": "Перевіряє чи є VALMAX шоти в Dribbble Popular. Оновлює Google Sheet.",
-     "Status": "🟢 Active"},
-    {"Job": "🏷️ Deep Tag Scan", "Schedule": "Щодня 9:00 UTC (батчами)",
-     "What": "Скенує теги до позиції 100. ~500 сторінок/день. Прогрес: 360/1272 тегів.",
-     "Status": "🟡 In Progress"},
-    {"Job": "📊 Daily Validation", "Schedule": "Щодня 8:30 CET",
-     "What": "Автоматична перевірка цілісності даних. Алерт якщо щось зламалось.",
-     "Status": "🔴 To Create"},
-    {"Job": "🏎️ Competitor Race Daily", "Schedule": "Щодня",
-     "What": "Скрейпить першу сторінку конкурентів для race dashboard.",
-     "Status": "🔴 To Create"},
+# === PIPELINE STATUS ===
+st.markdown("## 🔄 Pipeline Status")
+st.caption("Статус кожного data pipeline — дані з Meta sheet")
+
+# Define pipelines with expected freshness
+pipelines = [
+    {"dataset": "Profile Stats", "icon": "👤", "freq": "Daily (Mon-Fri)", "max_hours": 30},
+    {"dataset": "Shots Analytics", "icon": "📸", "freq": "Daily (Mon-Fri)", "max_hours": 30},
+    {"dataset": "Monthly Summary", "icon": "📈", "freq": "Daily (Mon-Fri)", "max_hours": 30},
+    {"dataset": "Popular Tracker", "icon": "⭐", "freq": "Daily (Mon-Fri)", "max_hours": 30},
+    {"dataset": "Leads (Project Requests)", "icon": "📋", "freq": "Daily (Mon-Fri)", "max_hours": 30},
+    {"dataset": "Leads Normalization", "icon": "🔧", "freq": "Daily (Mon-Fri)", "max_hours": 30},
+    {"dataset": "Follower Growth", "icon": "📈", "freq": "Monthly (1st)", "max_hours": 800},
+    {"dataset": "Tag Positions", "icon": "🏷️", "freq": "Monthly (2nd)", "max_hours": 800},
+    {"dataset": "Competitors", "icon": "🏆", "freq": "Monthly (1st)", "max_hours": 800},
+    {"dataset": "Competitor Shots", "icon": "🏆", "freq": "Monthly (1st)", "max_hours": 800},
+    {"dataset": "Pipedrive Sync", "icon": "🔗", "freq": "Daily (Mon-Fri)", "max_hours": 30},
+    {"dataset": "QuickBooks Sync", "icon": "💰", "freq": "Monthly (15th)", "max_hours": 800},
+    {"dataset": "Profitability", "icon": "💰", "freq": "Monthly (15th)", "max_hours": 800},
+    {"dataset": "SEO Data (Volume/CPC)", "icon": "🔍", "freq": "Weekly (Wed)", "max_hours": 200},
+    {"dataset": "SERP Data (Google Pos)", "icon": "🔍", "freq": "Weekly (Wed)", "max_hours": 200},
 ]
 
-for job in cron_data:
-    with st.expander(f"{job['Status']} {job['Job']} — {job['Schedule']}"):
-        st.markdown(f"**Що робить:** {job['What']}")
+# Count statuses
+ok_count = warn_count = error_count = pending_count = 0
 
-# --- OPERATIONS RULES ---
+for p in pipelines:
+    info = meta.get(p["dataset"], {})
+    ts = info.get("Last Updated", "")
+    status = info.get("Status", "")
+    details = info.get("Details", "")
+    
+    badge, age_text, hours = freshness(ts)
+    
+    if status == "✅" and hours < p["max_hours"]:
+        ok_count += 1
+    elif status == "❌":
+        error_count += 1
+    elif status == "⚠️" or hours > p["max_hours"]:
+        warn_count += 1
+    else:
+        pending_count += 1
+
+h1, h2, h3, h4 = st.columns(4)
+h1.metric("✅ OK", ok_count)
+h2.metric("⚠️ Warnings", warn_count)
+h3.metric("🚨 Errors", error_count)
+h4.metric("⏳ Pending", pending_count)
+
+if error_count > 0:
+    st.error(f"🚨 {error_count} pipeline(s) з помилками!")
+elif warn_count > 0:
+    st.warning(f"⚠️ {warn_count} pipeline(s) потребують уваги")
+else:
+    st.success("✅ Усі pipelines працюють нормально!")
+
+# Pipeline table
+rows = []
+for p in pipelines:
+    info = meta.get(p["dataset"], {})
+    ts = info.get("Last Updated", "")
+    status = info.get("Status", "⏳")
+    details = info.get("Details", "")
+    schedule = info.get("Cron Schedule", p["freq"])
+    
+    badge, age_text, hours = freshness(ts)
+    
+    # Determine health
+    if status == "✅" and hours < p["max_hours"]:
+        health = "🟢"
+    elif status == "❌":
+        health = "🔴"
+    elif hours > p["max_hours"] * 2:
+        health = "🔴"
+    elif status == "⚠️" or hours > p["max_hours"]:
+        health = "🟡"
+    elif not ts:
+        health = "⚪"
+    else:
+        health = "🟢"
+    
+    rows.append({
+        "": health,
+        "Pipeline": f"{p['icon']} {p['dataset']}",
+        "Last Updated": ts if ts else "—",
+        "Age": age_text if ts else "—",
+        "Status": f"{status} {details}" if details else status,
+        "Schedule": schedule,
+    })
+
+df_pipes = pd.DataFrame(rows)
+st.dataframe(df_pipes, use_container_width=True, hide_index=True, height=560)
+
 st.divider()
-st.markdown("## 📋 Operations Rules (Жорсткі правила)")
-st.caption("Ці правила НІКОЛИ не порушуються при оновленні даних")
+
+# === CRON LOG ===
+st.markdown("## 📋 Recent Cron Log")
+st.caption("Останні 20 записів з Cron Log sheet")
+
+cron_log = counts.get('cron_log', [])
+if cron_log:
+    # Try to make a dataframe from log entries
+    log_rows = []
+    for entry in cron_log:
+        if len(entry) >= 3:
+            log_rows.append({
+                "Timestamp": entry[0],
+                "Cron": entry[1] if len(entry) > 1 else "",
+                "Details": entry[2] if len(entry) > 2 else "",
+                "Status": entry[3] if len(entry) > 3 else "",
+            })
+    if log_rows:
+        df_log = pd.DataFrame(log_rows)
+        st.dataframe(df_log, use_container_width=True, hide_index=True)
+else:
+    st.info("Немає записів у Cron Log")
+
+st.divider()
+
+# === OPERATIONS RULES ===
+st.markdown("## 📋 Operations Rules")
+st.caption("Критичні правила для data pipelines")
 
 rules = [
-    {
-        "title": "🚫 НІКОЛИ ws.clear() на production sheets",
-        "desc": "Стирає profile stats (M1:N5) і monthly summary (M14:R). Замість цього: оновлюй конкретні діапазони.",
-        "severity": "critical"
-    },
-    {
-        "title": "🚫 НІКОЛИ перезаписувати всі шоти",
-        "desc": "Weekly cron додає ТІЛЬКИ нові шоти (APPEND). Якщо кількість рядків зменшилась — це баг!",
-        "severity": "critical"
-    },
-    {
-        "title": "✅ Валідація після кожного запису",
-        "desc": "Після будь-якого оновлення Sheet — запустити validate.py. Перевірити: row count, engagement <50%, monthly summary, profile stats.",
-        "severity": "critical"
-    },
-    {
-        "title": "✅ Red Flag: різке падіння даних",
-        "desc": "Якщо shots count впав >20% від попереднього значення — СТОП. Не записувати. Алерт користувачу.",
-        "severity": "critical"
-    },
-    {
-        "title": "📝 Engagement% зберігати як '6.15%'",
-        "desc": "Строка з %. Формула: (likes + saves) / views × 100. Якщо > 50% — баг (×100 двічі).",
-        "severity": "medium"
-    },
-    {
-        "title": "📝 Місяці англійською",
-        "desc": "'March 2026', не 'Март 2026'. Dashboard підтримує обидва формати, але нові дані — англійською.",
-        "severity": "medium"
-    },
-    {
-        "title": "📝 CPC як строка '$23.14'",
-        "desc": "Google Sheets з європейською локаллю конвертує 0.22 → 0,22 → парсить як 22 (×100 баг).",
-        "severity": "medium"
-    },
-    {
-        "title": "📝 Dribbble скрейпінг: browser, не requests",
-        "desc": "requests отримує статус 202 (blocked). Використовувати Playwright/CDP через browser profile 'openclaw'.",
-        "severity": "medium"
-    },
-    {
-        "title": "📝 Hourly check: ВСІ сторінки",
-        "desc": "Перевіряти не 4, а ВСІ сторінки Project Requests. Інакше пропускаємо нових клієнтів.",
-        "severity": "medium"
-    },
+    ("🚫", "НІКОЛИ ws.clear() на production sheets", "critical"),
+    ("🚫", "НІКОЛИ перезаписувати всі шоти — тільки APPEND нові", "critical"),
+    ("🚫", "Sonnet crons НЕ повинні генерувати фейкові дані при збої API", "critical"),
+    ("✅", "Валідація після кожного запису — перевірити row count", "medium"),
+    ("✅", "Red Flag: падіння даних >20% = СТОП + алерт", "medium"),
+    ("✅", "Дати завжди YYYY-MM-DD", "medium"),
+    ("✅", "Budget (CRM) тільки якщо відрізняється від Dribbble", "medium"),
+    ("📝", "Скрейпінг: 5-7с затримка між сторінками, max 100 pages/session", "info"),
+    ("📝", "Browser CDP на порті 18800, профіль 'openclaw'", "info"),
 ]
 
-for rule in rules:
-    color = '#dc3545' if rule['severity'] == 'critical' else '#ffc107'
-    bg = '#fff5f5' if rule['severity'] == 'critical' else '#fffdf0'
-    st.markdown(f"""<div style="background:{bg}; border-left:4px solid {color}; padding:12px; border-radius:4px; margin:8px 0;">
-        <b>{rule['title']}</b><br>
-        <span style="color:#666">{rule['desc']}</span>
-    </div>""", unsafe_allow_html=True)
-
-# --- KNOWN BUGS ---
-st.divider()
-st.markdown("## 🐛 Known Bugs & Fixes")
-st.caption("Задокументовані баги щоб не повторювались")
-
-bugs = [
-    {"bug": "Engagement ×100", "cause": "Subagent рахує (L+S)/V×100 і записує як '615.00%' замість '6.15%'", "fix": "Валідація: engagement >50% = баг. Перерахувати."},
-    {"bug": "ws.clear() стирає M колонки", "cause": "Profile stats і monthly summary в M:R зникають", "fix": "ЗАБОРОНЕНО ws.clear(). Оновлювати тільки конкретні діапазони."},
-    {"bug": "Dribbble 202 статус", "cause": "requests бібліотека отримує 202 замість 200", "fix": "Використовувати browser CDP для скрейпінгу."},
-    {"bug": "Місяці не сортуються", "cause": "Sheet має англійські назви, код шукає російські", "fix": "month_sort() підтримує обидва формати."},
-    {"bug": "CPC ×100", "cause": "Google Sheets європейська локаль: 0.22 → 0,22 → 22", "fix": "Зберігати як '$0.22' строку. parse_cpc() хендлить обидва формати."},
-    {"bug": "Крон перевіряє тільки 4 сторінки", "cause": "Пропускає лідів на сторінках 5+", "fix": "Сканувати ВСІ сторінки до кінця пагінації."},
-    {"bug": "get_all_records() падає", "cause": "Дублікати порожніх хедерів з M+ колонок", "fix": "Читати конкретний діапазон A1:K250, не get_all_records()."},
-]
-
-for b in bugs:
-    with st.expander(f"🐛 {b['bug']}"):
-        st.markdown(f"**Причина:** {b['cause']}")
-        st.markdown(f"**Фікс:** {b['fix']}")
-
-# --- SHEET STRUCTURE ---
-st.divider()
-st.markdown("## 📊 Sheet Structure")
-st.caption("Структура Google Sheet — що де лежить")
-
-structure = """
-| Tab | Колонки | Rows | Оновлення |
-|-----|---------|------|-----------|
-| 📊 Shots Analytics | A-K: shots, M:N profile, M14:R monthly | 212 | Weekly (Mon) |
-| 📋 Project Requests | 17 колонок (Місяць → Pipedrive) | 9 | Hourly check |
-| 📤 Project Intros | 17 колонок (ідентичні) | 18 | Manual |
-| 🏷️ Tag Positions | Tag, Position, Total, Shot | 327 | Deep scan batch |
-| 🔍 SEO Data | Tag, Volume, CPC | 191 | On demand |
-| 🔍 SERP Data | Tag, Dribbble Pos, AI Overview | 191 | On demand |
-| 🏆 Competitors | Profile data | 21 | Weekly |
-| 🏆 Competitor Shots | Shot details | 504 | Weekly |
-| 🔑 Dribbble Keywords | Keyword, Vol, CPC, Pos, URL | 297K | Static |
-| ⭐ Popular Tracker | Category, Position, Shot | ~10 | Daily |
-| 📅 Meta | Timestamps | - | Auto |
-"""
-st.markdown(structure)
+for icon, text, severity in rules:
+    color = {"critical": "#dc3545", "medium": "#ffc107", "info": "#6c757d"}[severity]
+    bg = {"critical": "#fff5f5", "medium": "#fffdf0", "info": "#f8f9fa"}[severity]
+    st.markdown(f'<div style="background:{bg};border-left:4px solid {color};padding:10px;border-radius:4px;margin:4px 0;">{icon} {text}</div>', unsafe_allow_html=True)
