@@ -75,7 +75,7 @@ if 'Месяц' in df.columns and 'Дата заявки' in df.columns:
 
 # --- HEADER ---
 st.markdown("# 📊 VALMAX Dribbble Analytics")
-from utils import show_last_updated
+from utils import show_last_updated, show_section_header
 show_last_updated("Leads (Project Requests)")
 st.divider()
 

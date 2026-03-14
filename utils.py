@@ -87,19 +87,20 @@ def show_section_header(title, dataset_name, icon=""):
     info = meta.get(dataset_name, {})
     ts = info.get('Last Updated', '') if isinstance(info, dict) else ''
     status = info.get('Status', '') if isinstance(info, dict) else ''
+    details = info.get('Details', '') if isinstance(info, dict) else ''
+    schedule = info.get('Cron Schedule', '') if isinstance(info, dict) else ''
     
     badge, age_text = _freshness_badge(ts)
     status_icon = status if status in ('✅', '⚠️', '❌') else '⏳'
     
-    # Title with badge
-    st.markdown(f"### {icon} {title} {badge}{status_icon}")
+    st.markdown(f"### {icon} {title}")
     
     if ts:
-        schedule = info.get('Cron Schedule', '') if isinstance(info, dict) else ''
-        details = info.get('Details', '') if isinstance(info, dict) else ''
-        caption = f"Оновлено: {ts} CET ({age_text})"
+        caption = f"{badge} {ts} CET · {age_text} · {status_icon}"
         if details:
-            caption += f" — {details}"
+            caption += f" {details}"
         if schedule:
             caption += f"  |  🔄 {schedule}"
         st.caption(caption)
+    else:
+        st.caption(f"⚪ Немає даних про оновлення")

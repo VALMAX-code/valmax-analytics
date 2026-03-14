@@ -126,6 +126,7 @@ show_last_updated("Shots Analytics")
 st.markdown("Аналітика по шотам на Dribbble")
 
 # --- PROFILE STATS ---
+show_section_header("Profile Stats", "Profile Stats", "👤")
 st.divider()
 p1, p2, p3, p4, p5 = st.columns(5)
 p1.metric("📊 Усього шотів", len(df))
@@ -217,7 +218,7 @@ if 'Date' in filtered.columns:
 
 # --- MONTHLY DYNAMICS ---
 st.divider()
-st.markdown("### 📈 Динаміка по місяцях")
+show_section_header("Динаміка по місяцях", "Monthly Summary", "📈")
 
 _ru_to_en_m = {'Январь':'January','Февраль':'February','Март':'March','Апрель':'April',
                'Май':'May','Июнь':'June','Июль':'July','Август':'August',
@@ -291,7 +292,7 @@ if monthly:
         st.plotly_chart(fig, use_container_width=True)
 
     # Growth comparison: monthly + weekly toggle
-    st.markdown("### 📊 Growth comparison")
+    show_section_header("Growth comparison", "Monthly Summary", "📊")
     growth_mode = st.radio("Compare by:", ["Month vs previous month", "Week vs previous week"], horizontal=True)
     
     if growth_mode == "Month vs previous month":
@@ -348,7 +349,7 @@ if monthly:
 
 # --- TOP SHOTS ---
 st.divider()
-st.markdown("### 🏆 Топ шоти")
+show_section_header("Топ шоти", "Shots Analytics", "🏆")
 
 top_col1, top_col2 = st.columns(2)
 
@@ -376,7 +377,7 @@ with top_col2:
 
 # --- ENGAGEMENT ANALYSIS ---
 st.divider()
-st.markdown("### 🎯 Engagement аналіз")
+show_section_header("Engagement аналіз", "Shots Analytics", "🎯")
 
 eng_col1, eng_col2 = st.columns(2)
 
@@ -424,7 +425,7 @@ with eng_col2:
 
 # --- TAGS ANALYSIS ---
 st.divider()
-st.markdown("### 🏷️ Top tags")
+show_section_header("Top tags", "Shots Analytics", "🏷️")
 
 if 'Теги' in df.columns:
     # Collect all tags with their shot metrics
@@ -521,7 +522,7 @@ if 'Теги' in df.columns:
 
 # --- PROJECT TYPES ---
 st.divider()
-st.markdown("### 🎨 Project types")
+show_section_header("Project types", "Shots Analytics", "🎨")
 
 def classify_shot(name):
     name = str(name).lower()
@@ -565,7 +566,7 @@ if 'Название' in df.columns:
 
 # --- SEO VISIBILITY ---
 st.divider()
-st.markdown("### 🔍 SEO Visibility (Google via Brave Search)")
+show_section_header("SEO Visibility (Google via Brave Search)", "SEO Data (Volume/CPC)", "🔍")
 st.caption("Які шоти VALMAX видно в Google при пошуку дизайн-запитів. Оновлюється щотижня.")
 
 seo_col1, seo_col2 = st.columns(2)
@@ -615,7 +616,7 @@ st.caption("💡 **Інсайт:** VALMAX індексується по брен
 
 # --- ALL SHOTS TABLE ---
 st.divider()
-st.markdown("### 📋 All shots")
+show_section_header("All shots", "Shots Analytics", "📋")
 display_cols = ['Месяц', 'Дата', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
 available_cols = [c for c in display_cols if c in filtered.columns]
 base_cols = ['Месяц', 'Название', 'Просмотры', 'Лайки', 'Сохранения', 'Комментарии', 'Engagement %', 'Кол-во тегов']
