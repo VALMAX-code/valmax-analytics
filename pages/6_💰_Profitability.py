@@ -336,12 +336,4 @@ if len(dff) > 1:
 
 st.divider()
 
-st.markdown("### ℹ️ Джерела даних")
-st.markdown("""
-- **Revenue** — Pipedrive CRM (won deals з "Dribbble" в назві)
-- **Costs** — QuickBooks API (акаунти 6330-6334 Dribbble, 5201 Freelancers)
-- **Team Share** — % зарплат: Kseniia 70%, Lev 50%, Stanislav 25%, Iryna 5%
-- **Leads** — Google Sheet "📋 Project Requests"
-""")
-
-show_last_updated("profitability")
+show_last_updated("Profitability")
