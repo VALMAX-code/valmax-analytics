@@ -20,15 +20,21 @@ def load_data():
         ws = sh.worksheet("📤 Project Intros")
         vals = ws.get_all_values()
         if not vals or len(vals) < 2:
-            return pd.DataFrame()
+            return pd.DataFrame(), pd.DataFrame()
         header = vals[0]
         rows = [r + [''] * (len(header) - len(r)) for r in vals[1:] if any(c.strip() for c in r)]
-        return pd.DataFrame(rows, columns=header)
+        intros_df = pd.DataFrame(rows, columns=header)
+        rev_ws = sh.worksheet("💰 Revenue")
+        rev_df = pd.DataFrame(rev_ws.get_all_records())
+        for c in ['Revenue ($)', 'Deals Won']:
+            if c in rev_df.columns:
+                rev_df[c] = pd.to_numeric(rev_df[c], errors='coerce').fillna(0)
+        return intros_df, rev_df
     except Exception as e:
         st.error(f"Failed to load: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
 
-df = load_data()
+df, rev_df = load_data()
 
 # --- HEADER ---
 st.markdown("# 📝 Brief Submissions")
@@ -87,7 +93,8 @@ reply_rate = f"{replied/total*100:.0f}%" if total > 0 else "0%"
 conversion = f"{won/total*100:.1f}%" if total > 0 else "0%"
 
 won_df = filtered[filtered['CRM Status'] == 'Won ✅'] if 'CRM Status' in filtered.columns else pd.DataFrame()
-total_revenue = won_df['Budget'].apply(parse_budget).sum() if 'Budget' in won_df.columns and len(won_df) > 0 else 0
+# Revenue from CRM (💰 Revenue tab), not from Budget column
+total_revenue = rev_df['Revenue ($)'].sum() if len(rev_df) > 0 else 0
 avg_deal = total_revenue / won if won > 0 else 0
 
 r1 = st.columns(5)
