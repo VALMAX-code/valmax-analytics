@@ -137,7 +137,7 @@ roi = (profit / dribbble_costs * 100) if dribbble_costs > 0 else 0
 deals_won = int(dff['Deals Won'].sum())
 total_leads = int(dff['Leads'].sum())
 avg_deal = total_revenue / deals_won if deals_won > 0 else 0
-cost_per_lead = total_costs / total_leads if total_leads > 0 else 0
+cost_per_lead = dribbble_costs / total_leads if total_leads > 0 else 0
 
 st.divider()
 
@@ -212,7 +212,7 @@ with col_b:
         {'Category': '🚀 Boosting / SaaS', 'Amount': f'${total_boost:,.0f}'},
         {'Category': '🎨 Designers (outsource)', 'Amount': f'${total_designers:,.0f}'},
         {'Category': '👥 Team (Dribbble share)', 'Amount': f'${total_team:,.0f}'},
-        {'Category': '**TOTAL**', 'Amount': f'**${total_costs:,.0f}**'},
+        {'Category': '**TOTAL**', 'Amount': f'**${dribbble_costs:,.0f}**'},
     ]
     st.dataframe(pd.DataFrame(cost_detail), use_container_width=True, hide_index=True)
     
@@ -386,7 +386,7 @@ for col in ['Revenue ($)', 'TOTAL COSTS', 'Profit ($)']:
 st.dataframe(df_table, use_container_width=True, hide_index=True)
 
 if len(dff) > 1:
-    st.markdown(f"**Загалом: Revenue ${total_revenue:,.0f} — Costs ${total_costs:,.0f} = Profit ${profit:,.0f} (ROI {roi:+.0f}%)**")
+    st.markdown(f"**Загалом: Revenue ${total_revenue:,.0f} — Costs ${dribbble_costs:,.0f} = Profit ${profit:,.0f} (ROI {roi:+.0f}%)**")
 
 st.divider()
 
