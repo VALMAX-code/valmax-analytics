@@ -102,7 +102,7 @@ if 'Бюджет (CRM / ~Dribbble)' in df.columns:
     df['Бюджет (CRM / ~Dribbble)'] = df['Бюджет (CRM / ~Dribbble)'].replace(BUDGET_FIXES)
 
 # --- HEADER ---
-st.markdown("# 📊 VALMAX Dribbble Analytics")
+st.markdown("# 📋 Project Requests")
 from utils import show_last_updated, show_section_header
 show_last_updated("Leads (Project Requests)")
 st.divider()
