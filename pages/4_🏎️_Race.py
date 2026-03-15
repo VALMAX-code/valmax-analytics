@@ -417,14 +417,29 @@ st.divider()
 st.markdown("### 💡 Recommendations")
 
 if valmax_row is not None:
-    # Calculate needed pace
-    days_left = 31 - 8  # March 8 = day 8
-    current_pace = valmax_row['Total Views'] / 8  # views per day so far
-    leader_pace = leader['Total Views'] / 8
+    import datetime as dt
+    # Dynamic day calculation from month name
+    today = dt.date.today()
+    days_elapsed = today.day  # how many days into the month
+    days_in_month = 31  # approximate
+    # Business days (Mon-Fri) elapsed
+    biz_days = sum(1 for d in range(1, days_elapsed + 1) if dt.date(today.year, today.month, d).weekday() < 5)
+    days_left = max(1, days_in_month - days_elapsed)
+    
+    current_pace = valmax_row['Total Views'] / max(1, days_elapsed)
+    leader_pace = leader['Total Views'] / max(1, days_elapsed)
     
     projected_valmax = int(valmax_row['Total Views'] + current_pace * days_left)
     projected_leader = int(leader['Total Views'] + leader_pace * days_left)
     needed_daily = int((leader['Total Views'] - valmax_row['Total Views'] + leader_pace * days_left) / days_left)
+    
+    # Shots per business day
+    valmax_shots = int(valmax_row['Shots'])
+    shots_per_biz_day = round(valmax_shots / max(1, biz_days), 1)
+    # Recommended: based on top competitor pace
+    leader_shots = int(leader['Shots'])
+    leader_spd = round(leader_shots / max(1, biz_days), 1)
+    recommended_spd = max(1.0, round((leader_spd + shots_per_biz_day) / 2, 1))
     
     rec_col1, rec_col2, rec_col3 = st.columns(3)
     rec_col1.metric("📈 Projected VALMAX (end of month)", f"{projected_valmax:,}", help="At current pace")
@@ -433,12 +448,13 @@ if valmax_row is not None:
     
     st.markdown(f"""
     **Аналіз:**
-    - VALMAX поточний темп: **{int(current_pace):,} views/day** ({valmax_row['Shots']} shots за 8 днів)
-    - Лідер ({leader['Profile']}): **{int(leader_pace):,} views/day** ({leader['Shots']} shots)
+    - VALMAX поточний темп: **{int(current_pace):,} views/day** ({valmax_shots} shots за {days_elapsed} днів, {biz_days} робочих)
+    - Наш темп публікацій: **{shots_per_biz_day} shots/робочий день**
+    - Лідер ({leader['Profile']}): **{int(leader_pace):,} views/day** ({leader_shots} shots, {leader_spd}/робочий день)
     - Щоб наздогнати лідера до кінця місяця: **{needed_daily:,} views/day**
     
     **Рекомендації:**
-    1. 📸 Збільшити частоту публікацій: за 8 днів опубліковано лише {valmax_row['Shots']} шотів. Ціль: **2-3 нових шоти щотижня** для більшого охоплення
+    1. 📸 Рекомендовано публікувати **{recommended_spd} shots/робочий день** (зараз {shots_per_biz_day})
     2. 🏷️ Використовувати перспективні теги з Tag Positions (Score 60+)
     3. 🔥 Фокус на якість: наш avg views/shot ({valmax_row['Avg Views/Shot']:,}) — конкурентний
     4. ⏰ Публікувати в пікові години (вт-чт, 10:00-14:00 UTC)

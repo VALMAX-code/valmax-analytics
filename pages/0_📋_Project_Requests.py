@@ -73,6 +73,28 @@ if 'Месяц' in df.columns and 'Дата заявки' in df.columns:
         return m
     df['Месяц'] = df.apply(_add_year, axis=1)
 
+# --- DATA NORMALIZATION ---
+# CRM Status: only valid values
+VALID_CRM = {'Lost ❌', 'Open 💙', 'Won ✅', 'No matches 🔄'}
+if 'CRM статус' in df.columns:
+    df['CRM статус'] = df['CRM статус'].apply(lambda x: x if x in VALID_CRM else 'No matches 🔄' if not x.strip() else x)
+    # Fix any stray values (e.g. "2")
+    df.loc[~df['CRM статус'].isin(VALID_CRM), 'CRM статус'] = 'No matches 🔄'
+
+# Project types: merge Logo Design → Branding
+PROJECT_TYPE_FIXES = {'Logo Design': 'Branding', 'Logo design': 'Branding', 'Branding/Design': 'Branding'}
+if 'Тип проекта' in df.columns:
+    df['Тип проекта'] = df['Тип проекта'].replace(PROJECT_TYPE_FIXES)
+
+# Budget normalization: standardize to ranges
+BUDGET_FIXES = {
+    '$800+': '<$1,000', '$800': '<$1,000', '$500': '<$1,000',
+    '$2,500': '$2,000-$3,000', '$2500': '$2,000-$3,000',
+    '$1000-$15000': '$1,000-$15,000',
+}
+if 'Бюджет (CRM / ~Dribbble)' in df.columns:
+    df['Бюджет (CRM / ~Dribbble)'] = df['Бюджет (CRM / ~Dribbble)'].replace(BUDGET_FIXES)
+
 # --- HEADER ---
 st.markdown("# 📊 VALMAX Dribbble Analytics")
 from utils import show_last_updated, show_section_header

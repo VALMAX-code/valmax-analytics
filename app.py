@@ -36,8 +36,12 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] [data-testid="stSi
 </style>""", unsafe_allow_html=True)
 
 pages = st.navigation({
+    "💼 SALES": [
+        st.Page("pages/0_📋_Project_Requests.py", title="Project Requests", icon="📋"),
+        st.Page("pages/8_📝_Brief_Submissions.py", title="Brief Submissions", icon="📝"),
+        st.Page("pages/9_🔎_Browse_Briefs.py", title="Browse Project Briefs", icon="🔎"),
+    ],
     "📊 ANALYTICS": [
-        st.Page("pages/0_📋_Leads_Analytics.py", title="Leads Analytics", icon="📋"),
         st.Page("pages/1_📸_Shots_Analytics.py", title="Shots Analytics", icon="📸"),
         st.Page("pages/4_🏎️_Race.py", title="Monthly Race", icon="🏎️"),
         st.Page("pages/2_🏆_Competitors.py", title="Competitors", icon="🏆"),
