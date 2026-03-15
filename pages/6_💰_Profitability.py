@@ -72,9 +72,13 @@ if not df_costs.empty:
 # Merge revenue into costs by month
 df = df_costs.copy()
 if not df_rev.empty:
-    rev_map = df_rev.set_index('Month')[['Deals Won', 'Revenue ($)', 'Deals Lost', 'Deals Open']].to_dict('index')
+    rev_cols = [c for c in ['Deals Won', 'Revenue ($)', 'Deals Lost', 'Deals Open'] if c in df_rev.columns]
+    if rev_cols:
+        rev_agg = df_rev.groupby('Month')[rev_cols].sum().to_dict('index')
+    else:
+        rev_agg = {}
     for col in ['Deals Won', 'Revenue ($)', 'Deals Lost', 'Deals Open']:
-        df[col] = df['Month'].apply(lambda m: rev_map.get(m, {}).get(col, 0))
+        df[col] = df['Month'].apply(lambda m: rev_agg.get(m, {}).get(col, 0))
 else:
     for col in ['Deals Won', 'Revenue ($)', 'Deals Lost', 'Deals Open']:
         df[col] = 0
