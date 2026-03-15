@@ -223,6 +223,7 @@ saas_cols = {
     'Detail: Dribe.org': 'Dribe.org', 
     'Detail: Mediamister': 'Mediamister',
     'Detail: B-top': 'B-top',
+    'Detail: AI Tools': 'AI Tools',
 }
 saas_chart_data = []
 for col_key, label in saas_cols.items():
