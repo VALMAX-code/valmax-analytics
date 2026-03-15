@@ -153,13 +153,7 @@ col1.metric("💰 Revenue (CRM)", f"${total_revenue:,.0f}")
 col2.metric("📊 Gross Margin (25%)", f"${gross_margin:,.0f}")
 col3.metric("📉 Dribbble Costs", f"${dribbble_costs:,.0f}")
 profit_color = "normal" if profit >= 0 else "inverse"
-col4.metric("📈 Channel Profit", f"${profit:,.0f}", delta=f"{roi:+.0f}% ROI" if dribbble_costs > 0 else None, delta_color=profit_color)
-
-col5, col6, col7, col8 = st.columns(4)
-col5.metric("🤝 Deals Won", f"{deals_won}")
-col6.metric("💵 Avg Deal", f"${avg_deal:,.0f}")
-col7.metric("📋 Leads", f"{total_leads}")
-col8.metric("💸 Cost per Lead", f"${cost_per_lead:,.0f}")
+col4.metric("🎯 Channel Status", "✅ Profitable" if profit >= 0 else "❌ Unprofitable", delta=f"${profit:+,.0f} ({roi:+.0f}% ROI)" if dribbble_costs > 0 else None, delta_color=profit_color)
 
 st.divider()
 
