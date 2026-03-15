@@ -264,7 +264,8 @@ st.divider()
 
 # --- POPULAR LEADERBOARD ---
 st.markdown("### ⭐ Popular Leaderboard")
-st.caption("Конкуренти в Dribbble Popular по категоріях. Хто нас обходить? Оновлюється щоденно.")
+show_last_updated("Popular Tracker")
+st.caption("Конкуренти в Dribbble Popular по категоріях. Оновлюється щоденно о 8:00 CET.")
 
 @st.cache_data(ttl=300)
 def load_popular_competitors():
