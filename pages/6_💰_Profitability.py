@@ -163,7 +163,7 @@ if len(dff) > 1:
 # === COST BREAKDOWN ===
 st.markdown(f"### 🥧 Структура витрат — {period_label}")
 
-total_pro = dff['Dribbble Pro Subscription'].sum()
+total_pro = dff['Dribbble Official Ads'].sum()
 total_boost = dff.get('Dribbble Boosting/SaaS', pd.Series([0])).sum()
 total_designers = dff.get('Dribbble Designers (outsource)', pd.Series([0])).sum()
 total_free = dff[freelancer_cols].sum().sum()
@@ -173,7 +173,7 @@ col_a, col_b = st.columns(2)
 
 with col_a:
     categories = {
-        '📢 Dribbble Pro': total_pro,
+        '📢 Official Ads': total_pro,
         '🚀 Boosting/SaaS': total_boost,
         '🎨 Designers (outsource)': total_designers,
         '👥 Team (Dribbble share)': total_team,
@@ -181,7 +181,7 @@ with col_a:
     categories = {k: v for k, v in categories.items() if v > 0}
     if categories:
         fig_pie = px.pie(names=list(categories.keys()), values=list(categories.values()),
-                         color_discrete_map={'📢 Dribbble Pro': '#e74c3c', '🚀 Boosting/SaaS': '#f39c12', '🎨 Designers (outsource)': '#3498db', '👥 Team (Dribbble share)': '#2ecc71'})
+                         color_discrete_map={'📢 Official Ads': '#e74c3c', '🚀 Boosting/SaaS': '#f39c12', '🎨 Designers (outsource)': '#3498db', '👥 Team (Dribbble share)': '#2ecc71'})
         fig_pie.update_traces(textposition='inside', textinfo='percent+value+label', texttemplate='%{label}<br>$%{value:,.0f}<br>(%{percent})')
         fig_pie.update_layout(showlegend=False, height=350)
         st.plotly_chart(fig_pie, use_container_width=True)
@@ -189,7 +189,7 @@ with col_a:
 with col_b:
     st.markdown("#### Деталізація")
     cost_detail = [
-        {'Category': '📢 Dribbble Pro', 'Amount': f'${total_pro:,.0f}'},
+        {'Category': '📢 Official Ads', 'Amount': f'${total_pro:,.0f}'},
         {'Category': '🚀 Boosting / SaaS', 'Amount': f'${total_boost:,.0f}'},
         {'Category': '🎨 Designers (outsource)', 'Amount': f'${total_designers:,.0f}'},
         {'Category': '👥 Team (Dribbble share)', 'Amount': f'${total_team:,.0f}'},
@@ -213,7 +213,7 @@ with col_b:
 if len(dff) > 1:
     chart_data = []
     for _, row in dff.iterrows():
-        chart_data.append({'Month': row['Month'], 'Category': '📢 Pro', 'Amount': row['Dribbble Pro Subscription']})
+        chart_data.append({'Month': row['Month'], 'Category': '📢 Ads', 'Amount': row['Dribbble Official Ads']})
         chart_data.append({'Month': row['Month'], 'Category': '🚀 Boosting/SaaS', 'Amount': row.get('Dribbble Boosting/SaaS', 0)})
         chart_data.append({'Month': row['Month'], 'Category': '🎨 Designers', 'Amount': row.get('Dribbble Designers (outsource)', 0)})
         chart_data.append({'Month': row['Month'], 'Category': '👥 Team', 'Amount': row['Team (Dribbble share)']})
@@ -221,7 +221,7 @@ if len(dff) > 1:
     df_chart = df_chart[df_chart['Amount'] > 0]
     
     fig_stack = px.bar(df_chart, x='Month', y='Amount', color='Category', barmode='stack',
-                       color_discrete_map={'📢 Pro': '#e74c3c', '🚀 Boosting/SaaS': '#f39c12', '🎨 Designers': '#3498db', '👥 Team': '#2ecc71'})
+                       color_discrete_map={'📢 Ads': '#e74c3c', '🚀 Boosting/SaaS': '#f39c12', '🎨 Designers': '#3498db', '👥 Team': '#2ecc71'})
     fig_stack.update_layout(height=350, legend=dict(orientation='h', y=1.1), yaxis_title='$')
     st.plotly_chart(fig_stack, use_container_width=True)
 
