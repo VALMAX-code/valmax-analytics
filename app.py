@@ -39,7 +39,6 @@ pages = st.navigation({
     "💼 SALES": [
         st.Page("pages/0_📋_Project_Requests.py", title="Project Requests", icon="📋"),
         st.Page("pages/8_📝_Brief_Submissions.py", title="Brief Submissions", icon="📝"),
-        st.Page("pages/9_🔎_Browse_Briefs.py", title="Browse Project Briefs", icon="🔎"),
     ],
     "📊 ANALYTICS": [
         st.Page("pages/1_📸_Shots_Analytics.py", title="Shots Analytics", icon="📸"),
