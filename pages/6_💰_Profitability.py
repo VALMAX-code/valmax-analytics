@@ -216,35 +216,36 @@ with col_b:
     ]
     st.dataframe(pd.DataFrame(cost_detail), use_container_width=True, hide_index=True)
     
-    # SaaS sub-detail breakdown chart
-    saas_cols = {
-        'Detail: Mymellon': 'Mymellon Bot',
-        'Detail: Dribe.org': 'Dribe.org', 
-        'Detail: Mediamister': 'Mediamister',
-        'Detail: B-top': 'B-top',
-    }
-    saas_chart_data = []
-    for col_key, label in saas_cols.items():
-        if col_key in dff.columns:
-            for _, row in dff.iterrows():
-                val = pd.to_numeric(row.get(col_key, 0), errors='coerce')
-                if pd.notna(val) and val > 0:
-                    saas_chart_data.append({'Month': row['Month'], 'Service': label, 'Amount': float(val)})
+
+# --- SaaS sub-detail breakdown (full width) ---
+saas_cols = {
+    'Detail: Mymellon': 'Mymellon Bot',
+    'Detail: Dribe.org': 'Dribe.org', 
+    'Detail: Mediamister': 'Mediamister',
+    'Detail: B-top': 'B-top',
+}
+saas_chart_data = []
+for col_key, label in saas_cols.items():
+    if col_key in dff.columns:
+        for _, row in dff.iterrows():
+            val = pd.to_numeric(row.get(col_key, 0), errors='coerce')
+            if pd.notna(val) and val > 0:
+                saas_chart_data.append({'Month': row['Month'], 'Service': label, 'Amount': float(val)})
+
+if saas_chart_data:
+    st.divider()
+    st.markdown("### 🔍 Boosting/SaaS деталізація")
+    saas_df = pd.DataFrame(saas_chart_data)
+    fig_saas = px.bar(saas_df, x='Month', y='Amount', color='Service', barmode='group',
+                     template='plotly_white', text_auto='$.2f',
+                     color_discrete_sequence=['#e74c3c', '#f39c12', '#3498db', '#2ecc71'])
+    fig_saas.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                          font=dict(color="#636e72"), height=400, legend=dict(orientation="h", y=-0.15))
+    st.plotly_chart(fig_saas, use_container_width=True)
     
-    if saas_chart_data:
-        st.markdown("##### 🔍 Boosting/SaaS деталізація")
-        saas_df = pd.DataFrame(saas_chart_data)
-        fig_saas = px.bar(saas_df, x='Month', y='Amount', color='Service', barmode='group',
-                         template='plotly_white', text_auto='$.2f',
-                         color_discrete_sequence=['#e74c3c', '#f39c12', '#3498db', '#2ecc71'])
-        fig_saas.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                              font=dict(color="#636e72"), height=300, legend=dict(orientation="h", y=-0.2))
-        st.plotly_chart(fig_saas, use_container_width=True)
-        
-        # Also show table
-        saas_totals = saas_df.groupby('Service')['Amount'].sum().reset_index()
-        saas_totals['Amount'] = saas_totals['Amount'].apply(lambda x: f'${x:,.2f}')
-        st.dataframe(saas_totals, use_container_width=True, hide_index=True)
+    saas_totals = saas_df.groupby('Service')['Amount'].sum().reset_index()
+    saas_totals['Amount'] = saas_totals['Amount'].apply(lambda x: f'${x:,.2f}')
+    st.dataframe(saas_totals, use_container_width=True, hide_index=True)
 
 # Cost trend stacked
 if len(dff) > 1:
