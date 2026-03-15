@@ -196,6 +196,18 @@ with col_b:
         {'Category': '**TOTAL**', 'Amount': f'**${total_costs:,.0f}**'},
     ]
     st.dataframe(pd.DataFrame(cost_detail), use_container_width=True, hide_index=True)
+    
+    # SaaS sub-detail breakdown
+    saas_cols = {'Mymellon': 'Mymellon Bot', 'Dribe.org': 'Dribe.org', 'Mediamister': 'Mediamister', 'B-top': 'B-top'}
+    saas_items = []
+    for col_key, label in saas_cols.items():
+        if col_key in dff.columns:
+            val = pd.to_numeric(dff[col_key], errors='coerce').fillna(0).sum()
+            if val > 0:
+                saas_items.append({'Service': label, 'Amount': f'${val:,.2f}'})
+    if saas_items:
+        st.markdown("##### 🔍 Boosting/SaaS деталізація")
+        st.dataframe(pd.DataFrame(saas_items), use_container_width=True, hide_index=True)
 
 # Cost trend stacked
 if len(dff) > 1:

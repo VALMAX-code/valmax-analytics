@@ -89,8 +89,14 @@ if 'Тип проекта' in df.columns:
 # Budget normalization: standardize to ranges
 BUDGET_FIXES = {
     '$800+': '<$1,000', '$800': '<$1,000', '$500': '<$1,000',
-    '$2,500': '$2,000-$3,000', '$2500': '$2,000-$3,000',
-    '$1000-$15000': '$1,000-$15,000',
+    '$2,500': '$2,500-$5,000', '$2500': '$2,500-$5,000',
+    '$2,000-$3,000': '$2,500-$5,000',
+    '$1000-$15000': '$1,000-$2,500',
+    '$1,000-$15,000': '$1,000-$2,500',
+    '$3000-$5000': '$2,500-$5,000', '$3,000-$5,000': '$2,500-$5,000',
+    '$5000-$10000': '$5,000-$10,000',
+    '$10000-$15000': '$10,000-$15,000',
+    '$15000+': '$15,000-$20,000',
 }
 if 'Бюджет (CRM / ~Dribbble)' in df.columns:
     df['Бюджет (CRM / ~Dribbble)'] = df['Бюджет (CRM / ~Dribbble)'].replace(BUDGET_FIXES)
@@ -255,7 +261,7 @@ with col_budget:
     if "Бюджет (CRM / ~Dribbble)" in filtered.columns:
         budgets = filtered["Бюджет (CRM / ~Dribbble)"].value_counts().reset_index()
         budgets.columns = ["Budget", "Count"]
-        budget_order = ["Unknown", "$1000-$3000", "$3000-$5000", "$5000-$10000", "$10000-$15000", "$15000+"]
+        budget_order = ["Unknown", "<$1,000", "$1,000-$2,500", "$2,500-$5,000", "$5,000-$10,000", "$10,000-$15,000", "$15,000-$20,000", ">$20,000"]
         budgets["sort"] = budgets["Budget"].apply(lambda x: next((i for i, o in enumerate(budget_order) if str(x).strip() == o), 99))
         budgets = budgets.sort_values("sort")
         fig = px.bar(budgets, x="Budget", y="Count", template="plotly_white",

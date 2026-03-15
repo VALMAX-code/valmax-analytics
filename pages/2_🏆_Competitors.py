@@ -39,18 +39,40 @@ def load_data():
         gc = gspread.authorize(creds)
         sh = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
         
+        def _vals_to_df(vals):
+            if not vals or len(vals) < 2:
+                return pd.DataFrame()
+            header = vals[0]
+            rows_data = [r + [''] * (len(header) - len(r)) for r in vals[1:] if any(c.strip() for c in r)]
+            return pd.DataFrame(rows_data, columns=header)
+        
         try:
             ws = sh.worksheet("🏆 Competitors")
-            rows = ws.get_all_records()
-            if rows:
-                df_profiles = pd.DataFrame(rows)
+            vals = ws.get_all_values()
+            if vals and len(vals) > 1:
+                df_profiles = _vals_to_df(vals)
+                # Convert numeric columns
+                for col in ['Followers', 'Total Likes (profile)', 'Shots Scraped', 'Total Views', 
+                           'Avg Views/Shot', 'Avg Likes/Shot', 'Total Saves', 'Posts/Month']:
+                    if col in df_profiles.columns:
+                        df_profiles[col] = pd.to_numeric(df_profiles[col], errors='coerce').fillna(0)
+                        if col != 'Posts/Month':
+                            df_profiles[col] = df_profiles[col].astype(int)
+                # Clean Engagement %
+                if 'Engagement %' in df_profiles.columns:
+                    df_profiles['Engagement %'] = df_profiles['Engagement %'].apply(
+                        lambda x: float(str(x).replace('%', '').strip() or 0) if x else 0)
+                
                 # Try to load shots too
                 df_shots = None
                 try:
                     ws2 = sh.worksheet("🏆 Competitor Shots")
-                    shot_rows = ws2.get_all_records()
-                    if shot_rows:
-                        df_shots = pd.DataFrame(shot_rows)
+                    shot_vals = ws2.get_all_values()
+                    if shot_vals and len(shot_vals) > 1:
+                        df_shots = _vals_to_df(shot_vals)
+                        for col in ['Views', 'Likes', 'Saves', 'Comments']:
+                            if col in df_shots.columns:
+                                df_shots[col] = pd.to_numeric(df_shots[col], errors='coerce').fillna(0).astype(int)
                 except:
                     pass
                 return df_profiles, df_shots, "sheet"
@@ -231,7 +253,16 @@ if valmax is not None and valmax.get('Avg Views/Shot', 0) > 0:
     col3.metric("📊 Avg Views/Shot", f"{valmax['Avg Views/Shot']:,}")
 else:
     col3.metric("📊 Avg Views/Shot", "—")
-col4.metric("🎯 Engagement", f"{valmax['Engagement %']}%" if valmax is not None and valmax.get('Engagement %', 0) > 0 else "—")
+if valmax is not None:
+    eng_val = valmax.get('Engagement %', '0')
+    eng_str = str(eng_val).replace('%', '').strip()
+    try:
+        eng_num = float(eng_str)
+        col4.metric("🎯 Engagement", f"{eng_num:.2f}%")
+    except:
+        col4.metric("🎯 Engagement", "—")
+else:
+    col4.metric("🎯 Engagement", "—")
 
 # --- FOLLOWERS RANKING ---
 st.divider()

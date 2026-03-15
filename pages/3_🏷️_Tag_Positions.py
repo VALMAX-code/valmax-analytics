@@ -110,8 +110,8 @@ row2[5].metric("🎯 #51–100", num_51_100)
 row2[6].metric("📭 100+", num_100plus)
 
 st.caption("""
-**🏷️ Total Unique Tags** — усі унікальні теги на 210 шотах VALMAX  ·  
-**✅ Tags with VALMAX** — теги, де хоча б один шот VALMAX з'являється у видачі (top 25 просканований, deep scan top 100 в процесі)  ·  
+**🏷️ Total Unique Tags** — усі унікальні теги на шотах VALMAX  ·  
+**✅ Tags with VALMAX** — теги, де хоча б один шот VALMAX з'являється у видачі (top 100)  ·  
 **📍 Total Positions** — загальна кількість знайдених позицій шот×тег (один шот може бути в кількох тегах)
 """)
 
