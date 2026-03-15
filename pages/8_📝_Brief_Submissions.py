@@ -66,13 +66,29 @@ if crm_filter != "All":
 if replied_filter != "All":
     filtered = filtered[filtered['Client Replied?'] == replied_filter]
 
+# --- Parse Budget ---
+def parse_budget(val):
+    if not val or val == 'Unknown':
+        return 0
+    val = str(val).replace(',', '').replace('+', '').replace('$', '').replace('~', '').strip()
+    # Range: take lower bound
+    if '-' in val:
+        try: return float(val.split('-')[0])
+        except: return 0
+    try: return float(val)
+    except: return 0
+
 # --- KPIs ---
 total = len(filtered)
 replied = len(filtered[filtered['Client Replied?'] == 'Yes'])
 meetings = len(filtered[filtered['Meeting Scheduled'] == 'Yes'])
 won = len(filtered[filtered['CRM Status'] == 'Won ✅'])
 reply_rate = f"{replied/total*100:.0f}%" if total > 0 else "0%"
-meeting_rate = f"{meetings/total*100:.0f}%" if total > 0 else "0%"
+conversion = f"{won/total*100:.1f}%" if total > 0 else "0%"
+
+won_df = filtered[filtered['CRM Status'] == 'Won ✅'] if 'CRM Status' in filtered.columns else pd.DataFrame()
+total_revenue = won_df['Budget'].apply(parse_budget).sum() if 'Budget' in won_df.columns and len(won_df) > 0 else 0
+avg_deal = total_revenue / won if won > 0 else 0
 
 r1 = st.columns(5)
 r1[0].metric("📤 Total Intros Sent", total)
@@ -80,6 +96,12 @@ r1[1].metric("💬 Client Replied", replied, help=f"Reply rate: {reply_rate}")
 r1[2].metric("📊 Reply Rate", reply_rate)
 r1[3].metric("📅 Meetings Scheduled", meetings)
 r1[4].metric("🏆 Won Deals", won)
+
+r2 = st.columns(4)
+r2[0].metric("📈 Conversion", conversion)
+r2[1].metric("💰 Revenue", f"${total_revenue:,.0f}")
+r2[2].metric("💵 Avg Deal", f"${avg_deal:,.0f}" if avg_deal > 0 else "—")
+r2[3].metric("📊 Cost per Win", f"${total_revenue/won:,.0f}" if won > 0 else "—", help="Revenue per won deal")
 
 st.divider()
 

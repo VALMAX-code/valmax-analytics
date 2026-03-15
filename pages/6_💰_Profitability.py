@@ -79,17 +79,33 @@ else:
     for col in ['Deals Won', 'Revenue ($)', 'Deals Lost', 'Deals Open']:
         df[col] = 0
 
-# Leads count from Project Requests
+# Leads count from Project Requests + Brief Submissions
+leads_by_month = {}
 try:
     leads_ws = _gs_connect().worksheet('📋 Project Requests')
     leads_data = leads_ws.get_all_records()
     df_leads = pd.DataFrame(leads_data)
-    if 'Місяць' in df_leads.columns:
-        leads_by_month = df_leads.groupby('Місяць').size().to_dict()
-    else:
-        leads_by_month = {}
+    col = 'Місяць' if 'Місяць' in df_leads.columns else 'Месяц' if 'Месяц' in df_leads.columns else 'Month'
+    if col in df_leads.columns:
+        leads_by_month = df_leads.groupby(col).size().to_dict()
 except:
-    leads_by_month = {}
+    pass
+
+# Brief Submissions count
+briefs_by_month = {}
+try:
+    briefs_ws = _gs_connect().worksheet('📤 Project Intros')
+    briefs_vals = briefs_ws.get_all_values()
+    if briefs_vals and len(briefs_vals) > 1:
+        for row in briefs_vals[1:]:
+            if row[0]:
+                briefs_by_month[row[0]] = briefs_by_month.get(row[0], 0) + 1
+except:
+    pass
+
+# Combine: leads = requests + briefs
+for m, c in briefs_by_month.items():
+    leads_by_month[m] = leads_by_month.get(m, 0) + c
 
 df['Leads'] = df['Month'].apply(lambda m: leads_by_month.get(m, 0))
 
