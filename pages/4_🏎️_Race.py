@@ -24,7 +24,32 @@ st.markdown("""
 
 # --- DATA ---
 @st.cache_data(ttl=300)
-def load_race_data():
+def _vals_to_df(vals):
+    """Convert get_all_values() to DataFrame, handling empty rows."""
+    if not vals or len(vals) < 2:
+        return pd.DataFrame()
+    header = vals[0]
+    rows = [r + [''] * (len(header) - len(r)) for r in vals[1:] if any(c.strip() for c in r)]
+    return pd.DataFrame(rows, columns=header)
+
+@st.cache_data(ttl=120)
+def list_race_months():
+    """Find all 🏎️ *Race tabs."""
+    try:
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = Credentials.from_service_account_info(creds_dict, scopes=[
+            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/drive.readonly'
+        ])
+        gc = gspread.authorize(creds)
+        sh = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
+        tabs = [ws.title for ws in sh.worksheets() if ws.title.startswith('🏎️') and 'Race' in ws.title and 'Detail' not in ws.title]
+        return sorted(tabs)
+    except:
+        return []
+
+@st.cache_data(ttl=120)
+def load_race_data(tab_name):
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
         creds = Credentials.from_service_account_info(creds_dict, scopes=[
@@ -34,31 +59,60 @@ def load_race_data():
         gc = gspread.authorize(creds)
         sh = gc.open_by_key('1680mdS7XHHB6ax4auS2XHGLXUFa1omqTEfn8hMmSoHc')
         
-        ws = sh.worksheet("🏎️ March 2026 Race")
-        rows = ws.get_all_records()
-        df_summary = pd.DataFrame(rows)
+        ws = sh.worksheet(tab_name)
+        vals = ws.get_all_values()
         
-        ws2 = sh.worksheet("🏎️ Race Detail")
-        detail_rows = ws2.get_all_records()
-        df_detail = pd.DataFrame(detail_rows)
+        # Summary is first block (until empty row or "Profile" header repeats)
+        summary_end = len(vals)
+        detail_start = None
+        for i, row in enumerate(vals[1:], 1):
+            if not any(c.strip() for c in row):
+                summary_end = i
+                break
+        
+        # Find detail block (second header row)
+        for i in range(summary_end, len(vals)):
+            if vals[i] and vals[i][0] == 'Profile' and len(vals[i]) > 5:
+                detail_start = i
+                break
+        
+        df_summary = _vals_to_df(vals[:summary_end])
+        df_detail = _vals_to_df(vals[detail_start:]) if detail_start else pd.DataFrame()
         
         return df_summary, df_detail
     except Exception as e:
         st.error(f"Failed to load data: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
-df, df_detail = load_race_data()
-
 # --- HEADER ---
 st.markdown("# 🏎️ Monthly Race")
 from utils import show_last_updated
 show_last_updated("Competitors")
 
+# Month selector
+race_months = list_race_months()
+if not race_months:
+    st.warning("No race data found")
+    st.stop()
+
+selected_tab = st.selectbox("📅 Оберіть місяць", race_months, index=len(race_months)-1)
+df, df_detail = load_race_data(selected_tab)
+
 if df.empty:
     st.warning("No race data found")
     st.stop()
 
-month = "March 2026"
+# Convert numeric columns
+for col in ['Shots', 'Total Views', 'Total Likes', 'Total Saves', 'Total Comments', 'Avg Views/Shot', 'Best Shot Views']:
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+
+if not df_detail.empty:
+    for col in ['Views', 'Likes', 'Saves', 'Comments']:
+        if col in df_detail.columns:
+            df_detail[col] = pd.to_numeric(df_detail[col], errors='coerce').fillna(0).astype(int)
+
+month = selected_tab.replace('🏎️ ', '').replace(' Race', '')
 st.markdown(f"### 📅 {month}")
 
 st.divider()
