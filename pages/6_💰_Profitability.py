@@ -237,7 +237,7 @@ if saas_chart_data:
     saas_df = pd.DataFrame(saas_chart_data)
     fig_saas = px.bar(saas_df, x='Month', y='Amount', color='Service', barmode='group',
                      template='plotly_white', text_auto='$.2f',
-                     color_discrete_sequence=['#e74c3c', '#f39c12', '#3498db', '#2ecc71'])
+                     color_discrete_map={'Mymellon Bot': '#e74c3c', 'Dribe.org': '#f39c12', 'Mediamister': '#3498db', 'B-top': '#2ecc71', 'AI Tools': '#9b59b6'})
     fig_saas.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                           font=dict(color="#636e72"), height=400, legend=dict(orientation="h", y=-0.15))
     st.plotly_chart(fig_saas, use_container_width=True)
