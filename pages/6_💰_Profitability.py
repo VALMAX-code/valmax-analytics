@@ -128,10 +128,12 @@ else:
 period_label = selected if selected != 'All Time' else 'Весь час'
 
 # --- Calculations ---
+MARGIN_RATE = 0.25  # Average margin after operational costs
 total_revenue = dff['Revenue ($)'].sum()
-total_costs = dff['TOTAL COSTS'].sum()
-profit = total_revenue - total_costs
-roi = (profit / total_costs * 100) if total_costs > 0 else 0
+gross_margin = total_revenue * MARGIN_RATE  # Revenue after operational costs
+dribbble_costs = dff['TOTAL COSTS'].sum()  # Dribbble-specific costs (ads, SaaS, designers, team)
+profit = gross_margin - dribbble_costs  # Channel profit = margin - channel costs
+roi = (profit / dribbble_costs * 100) if dribbble_costs > 0 else 0
 deals_won = int(dff['Deals Won'].sum())
 total_leads = int(dff['Leads'].sum())
 avg_deal = total_revenue / deals_won if deals_won > 0 else 0
@@ -143,11 +145,11 @@ st.divider()
 st.markdown(f"### 📊 P&L — {period_label}")
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("💰 Revenue", f"${total_revenue:,.0f}")
-col2.metric("📉 Costs", f"${total_costs:,.0f}")
+col1.metric("💰 Revenue (CRM)", f"${total_revenue:,.0f}")
+col2.metric("📊 Gross Margin (25%)", f"${gross_margin:,.0f}")
+col3.metric("📉 Dribbble Costs", f"${dribbble_costs:,.0f}")
 profit_color = "normal" if profit >= 0 else "inverse"
-col3.metric("📈 Profit", f"${profit:,.0f}", delta=f"{roi:+.0f}% ROI" if total_costs > 0 else None, delta_color=profit_color)
-col4.metric("🎯 Channel Status", "✅ Profitable" if profit >= 0 else "❌ Unprofitable")
+col4.metric("📈 Channel Profit", f"${profit:,.0f}", delta=f"{roi:+.0f}% ROI" if dribbble_costs > 0 else None, delta_color=profit_color)
 
 col5, col6, col7, col8 = st.columns(4)
 col5.metric("🤝 Deals Won", f"{deals_won}")
@@ -162,11 +164,12 @@ if len(dff) > 1:
     st.markdown("### 📈 P&L динаміка по місяцях")
     
     fig_pnl = go.Figure()
-    fig_pnl.add_trace(go.Bar(x=dff['Month'], y=dff['Revenue ($)'], name='Revenue', marker_color='#2ecc71'))
-    fig_pnl.add_trace(go.Bar(x=dff['Month'], y=dff['TOTAL COSTS'], name='Costs', marker_color='#e74c3c'))
+    monthly_margin = dff['Revenue ($)'] * MARGIN_RATE
+    fig_pnl.add_trace(go.Bar(x=dff['Month'], y=monthly_margin, name='Gross Margin (25%)', marker_color='#2ecc71'))
+    fig_pnl.add_trace(go.Bar(x=dff['Month'], y=dff['TOTAL COSTS'], name='Dribbble Costs', marker_color='#e74c3c'))
     
     # Profit line
-    monthly_profit = dff['Revenue ($)'] - dff['TOTAL COSTS']
+    monthly_profit = monthly_margin - dff['TOTAL COSTS']
     fig_pnl.add_trace(go.Scatter(x=dff['Month'], y=monthly_profit, name='Profit',
                                   mode='lines+markers+text', line=dict(color='#f1c40f', width=3),
                                   text=[f'${v:,.0f}' for v in monthly_profit], textposition='top center'))
